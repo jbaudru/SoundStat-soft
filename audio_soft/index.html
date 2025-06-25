@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Side Menu</title>
+  <link rel="stylesheet" href="static/styles.css">
+</head>
+
+<body>
+    <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+    <h5 class="title">SoundStats</h5>
+
+    <div class="side-menu" id="sideMenu">
+    <ul class="menu-items">
+        <li id="uploadMenu"><a href="#">Upload</a></li>
+        <li id="analyseMenu"><a href="#">Analyse</a></li>
+        <li id="aboutMenu"><a href="#">About</a></li>
+    </ul>
+    <button class="hide-btn" onclick="toggleMenu()">Hide</button>
+    </div>
+
+    <div class="content">
+        <h1>Analyse your sounds</h1>
+        <p>Free and Open Source analyser.</p>
+
+        <form id="uploadForm">
+            <div id="dropZone" class="drop-zone">
+                <span class="placeholder">+</span>
+                <p>Drag and drop a sound file here (wav, mp3, etc.)</p>
+            </div>
+            <input type="file" id="soundFile" name="soundFile" accept=".wav,.mp3,.ogg,.flac" hidden>
+        </form>
+    </div>
+
+    <div class="analyse" id="analyseSection" style="display: none;">
+        <h2>Results</h2>
+        <p id="fileInfo"></p>
+        <canvas class="waveform" id="waveformCanvas"></canvas>
+    </div>
+
+
+    <div class="about" id="aboutSection" style="display: none;">
+        <h2>About SoundStats</h2>
+        <p>SoundStats is a free and open-source sound analysis tool.</p>
+        <p>Developed by <a href="" target="_blank">Your Name</a>.</p>
+        <p>Version: 1.0.0</p>
+        <p>License: MIT</p>
+    </div>
+
+  <script src="lib/ui.js"></script>
+</body>
+
+</html>
