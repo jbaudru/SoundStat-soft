@@ -229,11 +229,11 @@ body {
 
 .waveform {
   width: 100%;
-  max-width: 800px;
+  max-width: 500px;
   height: 200px;
-  border: 1px solid #ddd;
+  /* border: 1px solid #ddd;
   border-radius: 8px;
-  background: #f8f9fa;
+  background: #f8f9fa;*/
 }
 
 /* Statistics Display Styles */

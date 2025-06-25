@@ -476,7 +476,14 @@ function updateStatistics(analysisResults) {
     
     // Update Duration
     const durationValue = document.getElementById('durationValue');
+    const durationFormatted = document.getElementById('durationFormatted');
     durationValue.textContent = `${stats.duration}s`;
+    
+    // Format duration as MM:SS
+    const minutes = Math.floor(stats.duration / 60);
+    const seconds = Math.floor(stats.duration % 60);
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    durationFormatted.textContent = `Duration: ${formattedTime}`;
     
     // Update Peak Level
     const peakValue = document.getElementById('peakValue');
@@ -549,6 +556,7 @@ function resetStatisticsToLoading() {
     document.getElementById('keyValue').textContent = '...';
     document.getElementById('dominantFreq').textContent = 'Analyzing...';
     document.getElementById('durationValue').textContent = '...';
+    document.getElementById('durationFormatted').textContent = 'Analyzing...';
     document.getElementById('peakValue').textContent = '...';
     document.getElementById('rmsValue').textContent = '...';
     document.getElementById('dynamicRangeValue').textContent = '...';
