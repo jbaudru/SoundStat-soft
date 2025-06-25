@@ -173,7 +173,7 @@ function getMagnitudeSpectrum(complexSpectrum) {
 // Optimized progressive waveform generation
 function generateProgressiveWaveform(channelData, chunkSize = 2000) {
     // Aggressive downsampling for speed - target 2000 points max
-    const targetPoints = 2000;
+    const targetPoints = 4000;
     const downsampleFactor = Math.max(1, Math.floor(channelData.length / targetPoints));
     const sampledLength = Math.floor(channelData.length / downsampleFactor);
     const waveformData = new Array(sampledLength);
@@ -502,8 +502,8 @@ function estimateTempoFromOnsets(peaks, sampleRate) {
     }
     
     // Enhanced autocorrelation with wider tempo range for small sounds
-    const minLag = Math.floor(0.32 / resolution); // ~190 BPM max
-    const maxLag = Math.floor(0.86 / resolution);  // ~70 BPM min
+    const minLag = Math.floor(0.25 / resolution); // ~240 BPM max
+    const maxLag = Math.floor(3.0 / resolution);  // ~20 BPM min
     const autocorr = new Array(maxLag - minLag + 1);
     
     // Calculate autocorrelation with normalization
@@ -534,7 +534,7 @@ function estimateTempoFromOnsets(peaks, sampleRate) {
             const period = lag * resolution;
             const bpm = 60 / period;
             
-            if (bpm >= 70 && bpm <= 190) {
+            if (bpm >= 20 && bpm <= 240) {
                 corrPeaks.push({
                     lag: lag,
                     correlation: autocorr[i],
@@ -570,7 +570,7 @@ function estimateTempoFromOnsets(peaks, sampleRate) {
             const refinedPeriod = refinedLag * resolution;
             const refinedBPM = 60 / refinedPeriod;
             
-            if (refinedBPM >= 70 && refinedBPM <= 190) {
+            if (refinedBPM >= 20 && refinedBPM <= 240) {
                 return {
                     bpm: refinedBPM,
                     confidence: best.correlation,
@@ -610,7 +610,7 @@ function trackMultipleTempos(peaks) {
         ];
         
         candidates.forEach(candidate => {
-            if (candidate >= 70 && candidate <= 190) {
+            if (candidate >= 40 && candidate <= 200) {
                 const rounded = Math.round(candidate * 2) / 2; // 0.5 BPM precision
                 const weight = peaks[i].flux * peaks[i - 1].flux;
                 
@@ -634,193 +634,82 @@ function trackMultipleTempos(peaks) {
     return candidates.sort((a, b) => b.score - a.score);
 }
 
-// Ultra-precise BPM detection optimized for small sounds and short segments
+// Ultra-precise BPM detection with multiple advanced techniques
 function detectBPM(channelData, sampleRate) {
     try {
         console.log('Starting ultra-precise BPM analysis...');
         
-        const audioDuration = channelData.length / sampleRate;
-        console.log(`Audio duration: ${audioDuration.toFixed(2)} seconds`);
+        // Use optimal segment length - 60 seconds for good statistical analysis
+        const maxSamples = sampleRate * 60;
+        const analysisData = channelData.length > maxSamples ? 
+            channelData.slice(0, maxSamples) : channelData;
         
-        // Adaptive analysis length based on audio duration
-        let analysisData;
-        if (audioDuration <= 2) {
-            // For very short audio, use all data
-            analysisData = channelData;
-            console.log('Using complete audio for very short segment');
-        } else if (audioDuration <= 10) {
-            // For short audio, use most of it
-            analysisData = channelData.slice(0, Math.floor(sampleRate * audioDuration * 0.9));
-            console.log('Using 90% of audio for short segment');
-        } else {
-            // For longer audio, use optimal 45-second window
-            const maxSamples = sampleRate * 45;
-            analysisData = channelData.length > maxSamples ? 
-                channelData.slice(0, maxSamples) : channelData;
-            console.log('Using 45-second window for longer audio');
+        if (analysisData.length < sampleRate * 5) { // Need at least 5 seconds
+            return { bpm: 120, confidence: 0.1 };
         }
         
-        // Minimum audio length check (reduced for small sounds)
-        const minDuration = 0.5; // 500ms minimum
-        if (analysisData.length < sampleRate * minDuration) {
-            console.log('Audio too short for reliable BPM detection');
-            return { bpm: 120, confidence: 0.05 };
-        }
-        
-        // Step 1: Enhanced onset detection
-        console.log('Detecting onsets with enhanced precision...');
+        // Step 1: Onset detection using spectral flux
+        console.log('Detecting onsets...');
         const onsets = detectOnsets(analysisData, sampleRate);
         
-        if (onsets.length < 2) {
-            console.log('Insufficient onsets detected');
+        if (onsets.length < 10) {
             return { bpm: 120, confidence: 0.1 };
         }
         
-        console.log(`Detected ${onsets.length} onsets`);
-        
-        // Step 2: Enhanced peak picking
-        console.log('Picking onset peaks with adaptive thresholding...');
+        // Step 2: Peak picking to find significant onsets
+        console.log('Picking onset peaks...');
         const peaks = pickOnsetPeaks(onsets);
         
-        if (peaks.length < 2) {
-            console.log('Insufficient peaks found');
-            return { bpm: 120, confidence: 0.15 };
+        if (peaks.length < 8) {
+            return { bpm: 120, confidence: 0.2 };
         }
         
-        console.log(`Found ${peaks.length} significant peaks`);
-        
-        // Step 3: Multiple tempo estimation methods
-        console.log('Estimating tempo using multiple methods...');
-        
-        // Method 1: Enhanced autocorrelation
+        // Step 3: Autocorrelation-based tempo estimation
+        console.log('Estimating tempo using autocorrelation...');
         const autocorrResult = estimateTempoFromOnsets(peaks, sampleRate);
         
-        // Method 2: Interval analysis with enhanced precision
+        // Step 4: Multiple hypothesis tempo tracking
+        console.log('Multiple hypothesis tempo tracking...');
         const tempoCandidates = trackMultipleTempos(peaks);
         
-        // Method 3: Direct interval analysis for very short audio
-        let directIntervalResult = null;
-        if (audioDuration < 3 && peaks.length >= 2) {
-            const intervals = [];
-            for (let i = 1; i < peaks.length; i++) {
-                const interval = peaks[i].time - peaks[i-1].time;
-                if (interval > 0.1 && interval < 3.0) { // Valid interval range
-                    intervals.push(60 / interval); // Convert to BPM
-                }
-            }
-            
-            if (intervals.length > 0) {
-                // Filter intervals to be within BPM range
-                const validIntervals = intervals.filter(bpm => bpm >= 70 && bpm <= 190);
-                
-                if (validIntervals.length > 0) {
-                    // Use median of intervals for stability
-                    validIntervals.sort((a, b) => a - b);
-                    const medianBPM = validIntervals[Math.floor(validIntervals.length / 2)];
-                    const std = Math.sqrt(validIntervals.reduce((sum, bpm) => sum + Math.pow(bpm - medianBPM, 2), 0) / validIntervals.length);
-                    const confidence = Math.max(0.1, 1 - (std / medianBPM));
-                    
-                    directIntervalResult = { bpm: medianBPM, confidence: confidence };
-                    console.log(`Direct interval analysis: ${medianBPM.toFixed(1)} BPM (confidence: ${confidence.toFixed(3)})`);
-                }
-            }
-        }
-        
-        // Step 4: Intelligent result combination
-        let bestBPM = 120;
-        let bestConfidence = 0.1;
-        let method = 'default';
-        
-        const candidates = [];
-        
-        if (autocorrResult) {
-            candidates.push({
-                method: 'autocorrelation',
-                bpm: autocorrResult.bpm,
-                confidence: autocorrResult.confidence * 0.9, // Slight penalty for complex method
-                weight: 1.0
-            });
-        }
-        
-        if (tempoCandidates.length > 0) {
-            candidates.push({
-                method: 'interval_analysis',
-                bpm: tempoCandidates[0].bpm,
-                confidence: Math.min(0.8, tempoCandidates[0].score / 1000),
-                weight: 0.8
-            });
-        }
-        
-        if (directIntervalResult) {
-            candidates.push({
-                method: 'direct_interval',
-                bpm: directIntervalResult.bpm,
-                confidence: directIntervalResult.confidence,
-                weight: audioDuration < 2 ? 1.2 : 0.7 // Higher weight for very short audio
-            });
-        }
-        
-        if (candidates.length === 0) {
-            console.log('No tempo candidates found');
+        if (tempoCandidates.length === 0 && !autocorrResult) {
             return { bpm: 120, confidence: 0.1 };
         }
         
-        // Weighted combination of results
-        if (candidates.length === 1) {
-            bestBPM = candidates[0].bpm;
-            bestConfidence = candidates[0].confidence;
-            method = candidates[0].method;
-        } else {
-            // Find candidates that agree (within 5 BPM)
-            const agreementGroups = [];
-            for (const candidate of candidates) {
-                let foundGroup = false;
-                for (const group of agreementGroups) {
-                    if (Math.abs(candidate.bpm - group[0].bpm) < 5) {
-                        group.push(candidate);
-                        foundGroup = true;
-                        break;
-                    }
-                }
-                if (!foundGroup) {
-                    agreementGroups.push([candidate]);
-                }
-            }
+        // Step 5: Combine results from different methods
+        let bestBPM = 120;
+        let bestConfidence = 0.1;
+        
+        if (autocorrResult && tempoCandidates.length > 0) {
+            // Weight autocorrelation result with interval analysis
+            const autocorrBPM = autocorrResult.bpm;
+            const intervalBPM = tempoCandidates[0].bpm;
             
-            // Use the group with highest combined confidence
-            let bestGroup = agreementGroups[0];
-            let bestScore = bestGroup.reduce((sum, c) => sum + c.confidence * c.weight, 0);
-            
-            for (const group of agreementGroups) {
-                const score = group.reduce((sum, c) => sum + c.confidence * c.weight, 0);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestGroup = group;
+            // Find the closest match or average if they're close
+            if (Math.abs(autocorrBPM - intervalBPM) < 5) {
+                bestBPM = (autocorrBPM * autocorrResult.confidence + intervalBPM * 0.7) / 
+                         (autocorrResult.confidence + 0.7);
+                bestConfidence = Math.min(0.9, autocorrResult.confidence * 0.8 + 0.2);
+            } else {
+                // Use the more confident result
+                if (autocorrResult.confidence > 0.3) {
+                    bestBPM = autocorrBPM;
+                    bestConfidence = autocorrResult.confidence;
+                } else {
+                    bestBPM = intervalBPM;
+                    bestConfidence = Math.min(0.7, tempoCandidates[0].score / 10000);
                 }
             }
-            
-            // Weighted average within the best group
-            let weightedBPM = 0;
-            let totalWeight = 0;
-            let maxConfidence = 0;
-            
-            for (const candidate of bestGroup) {
-                const weight = candidate.confidence * candidate.weight;
-                weightedBPM += candidate.bpm * weight;
-                totalWeight += weight;
-                maxConfidence = Math.max(maxConfidence, candidate.confidence);
-            }
-            
-            bestBPM = totalWeight > 0 ? weightedBPM / totalWeight : bestGroup[0].bpm;
-            bestConfidence = Math.min(0.95, maxConfidence * (1 + 0.1 * bestGroup.length)); // Bonus for agreement
-            method = bestGroup.map(c => c.method).join('+');
+        } else if (autocorrResult) {
+            bestBPM = autocorrResult.bpm;
+            bestConfidence = autocorrResult.confidence;
+        } else if (tempoCandidates.length > 0) {
+            bestBPM = tempoCandidates[0].bpm;
+            bestConfidence = Math.min(0.6, tempoCandidates[0].score / 10000);
         }
         
-        // Step 5: Musical validation and refinement
-        console.log('Applying musical validation...');
-        
-        // Check against common musical tempos
-        const commonTempos = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190];
+        // Step 6: Validate against common musical tempos
+        const commonTempos = [60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180];
         let closestCommon = null;
         let minDistance = Infinity;
         
@@ -832,36 +721,25 @@ function detectBPM(channelData, sampleRate) {
             }
         }
         
-        // Snap to common tempo if very close and confidence is reasonable
-        if (minDistance < 2 && bestConfidence > 0.3) {
+        // If very close to a common tempo, snap to it
+        if (minDistance < 3 && bestConfidence > 0.4) {
             bestBPM = closestCommon;
-            bestConfidence = Math.min(1.0, bestConfidence * 1.05);
+            bestConfidence = Math.min(1.0, bestConfidence * 1.1);
         }
         
-        // Step 6: Final precision refinement
-        if (peaks.length >= 4 && bestConfidence > 0.4) {
-            console.log('Final precision refinement...');
-            const refinedBPM = refineTempoWithBeatTracking(bestBPM, peaks, analysisData.length / sampleRate);
-            bestBPM = refinedBPM;
-        }
+        // Step 7: Final refinement using beat tracking
+        console.log('Final beat tracking refinement...');
+        const refinedBPM = refineTempoWithBeatTracking(bestBPM, peaks, analysisData.length / sampleRate);
         
         // Ensure reasonable bounds
-        bestBPM = Math.max(70, Math.min(190, bestBPM));
-        bestConfidence = Math.max(0.05, Math.min(1.0, bestConfidence));
+        bestBPM = Math.max(40, Math.min(200, refinedBPM));
+        bestConfidence = Math.max(0.1, Math.min(1.0, bestConfidence));
         
-        // Boost confidence for very consistent results
-        if (audioDuration < 2 && bestConfidence > 0.6) {
-            bestConfidence = Math.min(0.9, bestConfidence * 1.1);
-        }
-        
-        console.log(`Ultra-precise BPM analysis complete: ${bestBPM.toFixed(1)} BPM (confidence: ${bestConfidence.toFixed(3)}, method: ${method})`);
+        console.log(`Ultra-precise BPM analysis complete: ${bestBPM.toFixed(1)} BPM (confidence: ${bestConfidence.toFixed(3)})`);
         
         return { 
             bpm: Math.round(bestBPM * 10) / 10, // One decimal place precision
-            confidence: bestConfidence,
-            method: method,
-            peakCount: peaks.length,
-            audioDuration: audioDuration
+            confidence: bestConfidence 
         };
         
     } catch (error) {
@@ -870,40 +748,28 @@ function detectBPM(channelData, sampleRate) {
     }
 }
 
-// Enhanced beat tracking refinement with higher precision for small sounds
+// Beat tracking refinement
 function refineTempoWithBeatTracking(initialBPM, peaks, duration) {
-    if (peaks.length < 2) return initialBPM;
+    if (peaks.length < 8) return initialBPM;
     
-    // Adaptive refinement range based on confidence and audio length
-    const testRange = duration < 3 ? 8 : 5; // Wider range for short audio
-    const stepSize = duration < 2 ? 0.1 : 0.2; // Finer steps for very short audio
-    
+    // Test small variations around the initial BPM
+    const testRange = 5; // Test ±5 BPM
+    const stepSize = 0.2;
     let bestBPM = initialBPM;
     let bestScore = 0;
     
-    console.log(`Refining tempo around ${initialBPM.toFixed(1)} BPM (±${testRange} BPM, step: ${stepSize})`);
-    
     for (let testBPM = initialBPM - testRange; testBPM <= initialBPM + testRange; testBPM += stepSize) {
-        if (testBPM < 70 || testBPM > 190) continue;
+        if (testBPM < 40 || testBPM > 200) continue;
         
         const beatPeriod = 60 / testBPM;
-        const tolerance = Math.max(beatPeriod * 0.12, 0.02); // Minimum 20ms tolerance
+        const tolerance = beatPeriod * 0.15; // 15% tolerance
         let score = 0;
         let expectedBeats = Math.floor(duration / beatPeriod);
         
-        // For very short audio, ensure we have at least a few beats to check
-        if (expectedBeats < 2) {
-            expectedBeats = Math.max(2, Math.floor(duration / beatPeriod * 1.5));
-        }
-        
         // Score how well peaks align with this tempo
-        let alignedBeats = 0;
         for (let beatIndex = 0; beatIndex < expectedBeats; beatIndex++) {
             const expectedTime = beatIndex * beatPeriod;
-            if (expectedTime > duration) break;
-            
             let bestMatch = 0;
-            let bestPeak = null;
             
             // Find the closest peak to this expected beat time
             for (const peak of peaks) {
@@ -911,46 +777,20 @@ function refineTempoWithBeatTracking(initialBPM, peaks, duration) {
                 if (timeDiff <= tolerance) {
                     const proximity = 1 - (timeDiff / tolerance);
                     const strength = Math.log(1 + peak.flux);
-                    const match = proximity * strength;
-                    
-                    if (match > bestMatch) {
-                        bestMatch = match;
-                        bestPeak = peak;
-                    }
+                    bestMatch = Math.max(bestMatch, proximity * strength);
                 }
             }
-            
-            if (bestMatch > 0) {
-                score += bestMatch;
-                alignedBeats++;
-                
-                // Bonus for using multiple features
-                if (bestPeak.highFreqContent > 0) score += bestMatch * 0.1;
-                if (bestPeak.phaseDeviation > 0) score += bestMatch * 0.1;
-            }
+            score += bestMatch;
         }
         
-        // Normalize by number of expected beats and apply alignment bonus
-        if (expectedBeats > 0) {
-            score = score / expectedBeats;
-            
-            // Bonus for higher percentage of aligned beats
-            const alignmentRatio = alignedBeats / expectedBeats;
-            score *= (1 + alignmentRatio * 0.5);
-            
-            // Extra bonus for very short audio with good alignment
-            if (duration < 2 && alignmentRatio > 0.6) {
-                score *= 1.2;
-            }
-        }
+        // Normalize by number of expected beats
+        score = expectedBeats > 0 ? score / expectedBeats : 0;
         
         if (score > bestScore) {
             bestScore = score;
             bestBPM = testBPM;
         }
     }
-    
-    console.log(`Beat tracking refinement: ${initialBPM.toFixed(1)} → ${bestBPM.toFixed(1)} BPM (score improvement: ${bestScore > 0 ? 'yes' : 'no'})`);
     
     return bestBPM;
 }
