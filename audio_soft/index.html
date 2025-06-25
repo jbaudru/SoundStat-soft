@@ -50,7 +50,14 @@
         
         <!-- Waveform Display -->
         <div class="waveform-container">
-            <canvas class="waveform" id="waveformCanvas"></canvas>
+            <div class="audio-controls">
+                <button class="play-btn" id="playBtn">▶️</button>
+                <div class="waveform-wrapper">
+                    <canvas class="waveform" id="waveformCanvas"></canvas>
+                    <div class="playback-line" id="playbackLine"></div>
+                </div>
+            </div>
+            <audio id="audioPlayer" style="display: none;"></audio>
         </div>
         
         <!-- Audio Statistics -->

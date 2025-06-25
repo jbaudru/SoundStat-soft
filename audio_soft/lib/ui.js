@@ -146,6 +146,8 @@ soundFileInput.addEventListener('change', () => {
 // Listen for successful file copy confirmation
 ipcRenderer.on('file-copy-success', (event, copiedFilePath) => {
   console.log('File successfully copied to:', copiedFilePath);
+  // Set the audio file for playback
+  setAudioFile(copiedFilePath);
   // Now send the copied file path for processing
   ipcRenderer.send('file-uploaded', copiedFilePath);
 });
@@ -180,6 +182,9 @@ function showAnalyseSection(filePathOrName) {
   // Reset progressive waveform tracking
   progressiveWaveform = [];
   isAnalysisInProgress = true;
+  
+  // Reset audio player
+  stopPlayback();
   
   // Clear previous waveform
   const canvas = document.getElementById('waveformCanvas');
@@ -563,3 +568,172 @@ function resetStatisticsToLoading() {
     document.getElementById('spectralCentroidValue').textContent = '...';
     document.getElementById('zcrValue').textContent = '...';
 }
+
+// Audio Player Functionality
+let currentAudioFile = null;
+let audioPlayer = null;
+let playbackLine = null;
+let playBtn = null;
+let isPlaying = false;
+let animationFrame = null;
+
+// Initialize audio player elements
+function initializeAudioPlayer() {
+    audioPlayer = document.getElementById('audioPlayer');
+    playbackLine = document.getElementById('playbackLine');
+    playBtn = document.getElementById('playBtn');
+    
+    if (playBtn) {
+        playBtn.addEventListener('click', togglePlayback);
+    }
+    
+    if (audioPlayer) {
+        audioPlayer.addEventListener('timeupdate', updatePlaybackPosition);
+        audioPlayer.addEventListener('ended', stopPlayback);
+        audioPlayer.addEventListener('loadedmetadata', () => {
+            console.log('Audio loaded, duration:', audioPlayer.duration);
+        });
+    }
+}
+
+// Set the audio file for playback
+function setAudioFile(filePath) {
+    // Initialize if not already done
+    if (!audioPlayer) {
+        initializeAudioPlayer();
+    }
+    
+    currentAudioFile = filePath;
+    if (audioPlayer) {
+        audioPlayer.src = `file://${filePath}`;
+        audioPlayer.load();
+    }
+}
+
+// Toggle play/pause
+function togglePlayback() {
+    if (!audioPlayer || !currentAudioFile) {
+        console.log('No audio file loaded');
+        return;
+    }
+    
+    if (isPlaying) {
+        pausePlayback();
+    } else {
+        startPlayback();
+    }
+}
+
+// Start playback
+function startPlayback() {
+    if (audioPlayer) {
+        audioPlayer.play();
+        isPlaying = true;
+        playBtn.textContent = '⏸️';
+        playBtn.classList.add('playing');
+        playbackLine.classList.add('visible');
+        startPositionAnimation();
+    }
+}
+
+// Pause playback
+function pausePlayback() {
+    if (audioPlayer) {
+        audioPlayer.pause();
+        isPlaying = false;
+        playBtn.textContent = '▶️';
+        playBtn.classList.remove('playing');
+        stopPositionAnimation();
+    }
+}
+
+// Stop playback
+function stopPlayback() {
+    if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        isPlaying = false;
+        playBtn.textContent = '▶️';
+        playBtn.classList.remove('playing');
+        playbackLine.classList.remove('visible');
+        
+        // Reset position to the beginning of the canvas
+        const canvas = document.getElementById('waveformCanvas');
+        if (canvas) {
+            const canvasRect = canvas.getBoundingClientRect();
+            const wrapperRect = canvas.parentElement.getBoundingClientRect();
+            const canvasOffsetLeft = canvasRect.left - wrapperRect.left;
+            playbackLine.style.left = `${canvasOffsetLeft}px`;
+        }
+        
+        stopPositionAnimation();
+    }
+}
+
+// Update playback position
+function updatePlaybackPosition() {
+    if (!audioPlayer || !playbackLine) return;
+    
+    const canvas = document.getElementById('waveformCanvas');
+    if (!canvas) return;
+    
+    // Ensure we have valid duration and currentTime
+    if (!audioPlayer.duration || audioPlayer.duration === 0) return;
+    
+    const progress = Math.max(0, Math.min(1, audioPlayer.currentTime / audioPlayer.duration));
+    const canvasRect = canvas.getBoundingClientRect();
+    const wrapperRect = canvas.parentElement.getBoundingClientRect();
+    
+    // Calculate position relative to the wrapper
+    const canvasOffsetLeft = canvasRect.left - wrapperRect.left;
+    const position = canvasOffsetLeft + (progress * canvasRect.width);
+    
+    playbackLine.style.left = `${position}px`;
+}
+
+// Animation loop for smooth position updates
+function startPositionAnimation() {
+    function animate() {
+        if (isPlaying) {
+            updatePlaybackPosition();
+            animationFrame = requestAnimationFrame(animate);
+        }
+    }
+    animate();
+}
+
+// Stop position animation
+function stopPositionAnimation() {
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
+}
+
+// Waveform click to seek functionality
+function initializeWaveformSeek() {
+    const canvas = document.getElementById('waveformCanvas');
+    if (canvas) {
+        canvas.addEventListener('click', (event) => {
+            if (!audioPlayer || !currentAudioFile || !audioPlayer.duration) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const canvasWidth = rect.width;
+            const seekPercentage = Math.max(0, Math.min(1, clickX / canvasWidth));
+            
+            const seekTime = seekPercentage * audioPlayer.duration;
+            audioPlayer.currentTime = seekTime;
+            updatePlaybackPosition();
+        });
+        
+        // Add cursor pointer style when hovering over canvas
+        canvas.style.cursor = 'pointer';
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initializeAudioPlayer();
+    initializeWaveformSeek();
+});

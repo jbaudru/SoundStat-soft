@@ -24,8 +24,8 @@ app.on('ready', async () => {
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
-        minWidth: 600,
-        minHeight: 500,
+        minWidth: 800,
+        minHeight: 600,
         title: 'SoundStat',
         webPreferences: {
             nodeIntegration: true,
