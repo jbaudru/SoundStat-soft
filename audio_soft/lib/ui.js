@@ -287,8 +287,8 @@ function renderProgressiveWaveform(waveformData) {
     
     // Set waveform style
     ctx.lineWidth = 1;
-    ctx.strokeStyle = '#4facfe';
-    ctx.fillStyle = 'rgba(79, 172, 254, 0.1)';
+    ctx.strokeStyle = '#C0C0C0';
+    ctx.fillStyle = 'rgba(192, 192, 192, 0.1)';
     
     // Scale the waveform data to fit the canvas
     const maxAmplitude = Math.max(...waveformData.map(point => Math.abs(point.y)));
@@ -410,8 +410,8 @@ function renderWaveform(waveform) {
 
     // Set waveform style
     ctx.lineWidth = 1;
-    ctx.strokeStyle = '#4facfe';
-    ctx.fillStyle = 'rgba(79, 172, 254, 0.1)';
+    ctx.strokeStyle = '#C0C0C0';
+    ctx.fillStyle = 'rgba(192, 192, 192, 0.1)';
 
     if (waveform && waveform.length > 0) {
         // Scale the waveform data to fit the canvas

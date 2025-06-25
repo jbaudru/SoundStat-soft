@@ -51,6 +51,13 @@ body {
   color: rgb(75, 75, 75);
 }
 
+.song-name {
+  font-size: 10px;
+  font-weight: 500;
+  padding-bottom: 20px;
+  color: rgb(75, 75, 75);
+}
+
 .toggle-btn {
   background: linear-gradient(135deg, rgba(75, 75, 75, 0.1), rgba(75, 75, 75, 0.05));
   color: rgb(75, 75, 75);
@@ -164,7 +171,7 @@ body {
   flex-direction: column; /* Align elements vertically */
   justify-content: center; /* Center elements vertically */
   align-items: center; /* Center elements horizontally */
-  height: 100vh; /* Make the content div take the full viewport height */
+  height: 95vh; /* Make the content div take the full viewport height */
   text-align: center; /* Center text inside the elements */
 }
 

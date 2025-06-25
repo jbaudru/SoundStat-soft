@@ -17,6 +17,30 @@ async function checkFFmpegOnStartup() {
     }
 }
 
+// Function to clean up all files in the sound folder
+function cleanupSoundFolder() {
+    const soundFolderPath = path.join(__dirname, 'sound');
+    try {
+        if (fs.existsSync(soundFolderPath)) {
+            const files = fs.readdirSync(soundFolderPath);
+            files.forEach(file => {
+                const filePath = path.join(soundFolderPath, file);
+                try {
+                    if (fs.statSync(filePath).isFile()) {
+                        fs.unlinkSync(filePath);
+                        console.log(`Deleted file: ${file}`);
+                    }
+                } catch (error) {
+                    console.error(`Error deleting file ${file}:`, error);
+                }
+            });
+            console.log('Sound folder cleanup completed');
+        }
+    } catch (error) {
+        console.error('Error cleaning up sound folder:', error);
+    }
+}
+
 app.on('ready', async () => {
     // Check FFmpeg availability on startup
     await checkFFmpegOnStartup();
@@ -73,10 +97,16 @@ app.on('ready', async () => {
                 
                 // Send complete analysis data back to the renderer process
                 event.sender.send('audio-analysis-data', analysisResults);
+                
+                // Clean up sound folder after analysis
+                cleanupSoundFolder();
             })
             .catch(error => {
                 console.error('Error generating waveform:', error);
                 event.sender.send('waveform-error', error.message);
+                
+                // Clean up sound folder even on error
+                cleanupSoundFolder();
             });
         
         // Send success message with the new file path
@@ -114,10 +144,16 @@ app.on('ready', async () => {
                     
                     // Send complete analysis data back to the renderer process
                     event.sender.send('audio-analysis-data', analysisResults);
+                    
+                    // Clean up sound folder after analysis
+                    cleanupSoundFolder();
                 })
                 .catch(error => {
                     console.error('Error generating waveform:', error);
                     event.sender.send('waveform-error', error.message);
+                    
+                    // Clean up sound folder even on error
+                    cleanupSoundFolder();
                 });
             
             // Send success message with the new file path
