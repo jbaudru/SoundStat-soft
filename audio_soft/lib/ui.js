@@ -172,17 +172,161 @@ function showAnalyseSection(filePath) {
 ipcRenderer.on('audio-analysis-data', (event, analysisResults) => {
     console.log('Received audio analysis data:', analysisResults);
 
+    // Hide progress bar
+    const progressContainer = document.getElementById('progressContainer');
+    progressContainer.style.display = 'none';
+    
+    // Reset progressive waveform
+    progressiveWaveform = [];
+    isAnalysisInProgress = false;
+
     // Update file info
     const fileName = analysisResults.fileName;
     const fileSize = (analysisResults.fileSize / 1024 / 1024).toFixed(2); // Convert to MB
     fileInfo.textContent = `${fileName} (${fileSize} MB)`;
 
-    // Render the waveform
+    // Render the final waveform
     renderWaveform(analysisResults.waveform);
     
     // Update all statistics
     updateStatistics(analysisResults);
 });
+
+// Global variables for progressive waveform rendering
+let progressiveWaveform = [];
+let isAnalysisInProgress = false;
+
+// Listen for progressive audio analysis updates
+ipcRenderer.on('audio-analysis-progress', (event, update) => {
+    console.log('Progress update:', update);
+    
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    switch (update.type) {
+        case 'progress':
+            // Show progress bar if not visible
+            if (progressContainer.style.display === 'none') {
+                progressContainer.style.display = 'block';
+            }
+            
+            // Update progress bar
+            progressFill.style.width = `${update.progress}%`;
+            progressText.textContent = `${update.stage} (${Math.round(update.progress)}%)`;
+            break;
+            
+        case 'waveform_chunk':
+            // Render waveform progressively
+            progressiveWaveform.push(...update.chunk);
+            renderProgressiveWaveform(progressiveWaveform);
+            
+            progressFill.style.width = `${update.progress}%`;
+            progressText.textContent = `Generating Waveform (${update.currentChunk}/${update.totalChunks})`;
+            break;
+            
+        case 'partial_results':
+            // Update UI with partial results as they become available
+            updatePartialStatistics(update.data);
+            break;
+    }
+});
+
+// Function to render progressive waveform
+function renderProgressiveWaveform(waveformData) {
+    if (!waveformData || waveformData.length === 0) return;
+    
+    const canvas = document.getElementById('waveformCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Get device pixel ratio for crisp rendering
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    
+    // Set actual canvas size in memory (scaled up for retina displays)
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    
+    // Scale the canvas back down using CSS
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    
+    // Scale the drawing context so everything draws at the correct size
+    ctx.scale(dpr, dpr);
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    
+    // Set waveform style
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#4facfe';
+    ctx.fillStyle = 'rgba(79, 172, 254, 0.1)';
+    
+    // Scale the waveform data to fit the canvas
+    const maxAmplitude = Math.max(...waveformData.map(point => Math.abs(point.y)));
+    const scaleX = rect.width / Math.max(waveformData.length, 4000); // Normalize to expected final length
+    const scaleY = maxAmplitude > 0 ? rect.height / (2 * maxAmplitude) : 1;
+    const centerY = rect.height / 2;
+    
+    // Draw filled waveform
+    ctx.beginPath();
+    ctx.moveTo(0, centerY);
+    
+    waveformData.forEach((point, index) => {
+        const x = point.x * scaleX;
+        const y = centerY - point.y * scaleY;
+        ctx.lineTo(x, y);
+    });
+    
+    ctx.lineTo(rect.width, centerY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw waveform outline
+    ctx.beginPath();
+    waveformData.forEach((point, index) => {
+        const x = point.x * scaleX;
+        const y = centerY - point.y * scaleY;
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // Draw center line
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, centerY);
+    ctx.lineTo(rect.width, centerY);
+    ctx.stroke();
+}
+
+// Function to update partial statistics as they become available
+function updatePartialStatistics(partialResults) {
+    if (partialResults.bpm) {
+        const bpmValue = document.getElementById('bpmValue');
+        const bpmConfidence = document.getElementById('bpmConfidence');
+        
+        if (partialResults.bpm.bpm > 0) {
+            bpmValue.textContent = partialResults.bpm.bpm;
+            bpmConfidence.textContent = `Confidence: ${(partialResults.bpm.confidence * 100).toFixed(1)}%`;
+        } else {
+            bpmValue.textContent = 'N/A';
+            bpmConfidence.textContent = 'Could not detect';
+        }
+    }
+    
+    if (partialResults.key) {
+        const keyValue = document.getElementById('keyValue');
+        const dominantFreq = document.getElementById('dominantFreq');
+        keyValue.textContent = partialResults.key.note;
+        dominantFreq.textContent = `Freq: ${partialResults.key.dominantFreq} Hz`;
+    }
+}
 
 // Function to render waveform
 function renderWaveform(waveform) {
@@ -307,6 +451,14 @@ function updateStatistics(analysisResults) {
 ipcRenderer.on('waveform-error', (event, error) => {
     console.error('Waveform generation error:', error);
     
+    // Hide progress bar
+    const progressContainer = document.getElementById('progressContainer');
+    progressContainer.style.display = 'none';
+    
+    // Reset progressive waveform
+    progressiveWaveform = [];
+    isAnalysisInProgress = false;
+    
     // Update file info to show error
     fileInfo.textContent = `Error processing file: ${error}`;
     
@@ -340,7 +492,6 @@ ipcRenderer.on('waveform-error', (event, error) => {
 
 // Function to show the analyse section
 function showAnalyseSection(fileName) {
-    
     contentDiv.style.display = 'none'; // Hide the content div
     analyseDiv.style.display = 'block'; // Show the analyse div
     aboutDiv.style.display = 'none'; // Hide the about div
@@ -348,7 +499,38 @@ function showAnalyseSection(fileName) {
     const fileInfo = document.getElementById('fileInfo');
     fileInfo.textContent = `Processing: ${fileName}...`; // Display file information
 
-    // Ensure the canvas is visible
-    const canvas = document.getElementById('waveformCanvas');
+    // Show progress bar and reset progress
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
     
+    progressContainer.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = 'Starting analysis...';
+    
+    // Reset progressive waveform tracking
+    progressiveWaveform = [];
+    isAnalysisInProgress = true;
+    
+    // Clear previous waveform
+    const canvas = document.getElementById('waveformCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Reset all statistics to loading state
+    resetStatisticsToLoading();
+}
+
+// Function to reset statistics to loading state
+function resetStatisticsToLoading() {
+    document.getElementById('bpmValue').textContent = '...';
+    document.getElementById('bpmConfidence').textContent = 'Analyzing...';
+    document.getElementById('keyValue').textContent = '...';
+    document.getElementById('dominantFreq').textContent = 'Analyzing...';
+    document.getElementById('durationValue').textContent = '...';
+    document.getElementById('peakValue').textContent = '...';
+    document.getElementById('rmsValue').textContent = '...';
+    document.getElementById('dynamicRangeValue').textContent = '...';
+    document.getElementById('spectralCentroidValue').textContent = '...';
+    document.getElementById('zcrValue').textContent = '...';
 }

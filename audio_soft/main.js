@@ -2,10 +2,25 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const { generateWaveform } = require('./lib/sound'); // Import waveform generation function
 const fs = require('fs'); // Import file system module for file existence checks
 const path = require('path');
+const FFmpegInstaller = require('./lib/ffmpegInstaller');
 
 let mainWindow;
 
-app.on('ready', () => {
+// Check FFmpeg on startup
+async function checkFFmpegOnStartup() {
+    const installer = new FFmpegInstaller();
+    const isAvailable = await installer.install();
+    
+    if (!isAvailable) {
+        console.log('\n⚠️  FFmpeg not found - only WAV files will be supported');
+        console.log('Run "npm run setup-ffmpeg" for installation instructions');
+    }
+}
+
+app.on('ready', async () => {
+    // Check FFmpeg availability on startup
+    await checkFFmpegOnStartup();
+    
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
@@ -34,9 +49,7 @@ app.on('ready', () => {
     fs.mkdirSync(soundFolderPath, { recursive: true });
     }
 
-    // ...existing code...
-
-    // Handle file copying
+    // Handle file copying with progressive updates
     ipcMain.on('copy-file-to-sound-folder', (event, originalFilePath) => {
     try {
         const fileName = path.basename(originalFilePath);
@@ -45,7 +58,12 @@ app.on('ready', () => {
         // Copy the file
         fs.copyFileSync(originalFilePath, destinationPath);
 
-        generateWaveform(destinationPath)
+        // Create progress callback to send updates to renderer
+        const progressCallback = (update) => {
+            event.sender.send('audio-analysis-progress', update);
+        };
+
+        generateWaveform(destinationPath, progressCallback)
             .then(analysisResults => {
                 // Send complete analysis data back to the renderer process
                 event.sender.send('audio-analysis-data', analysisResults);
@@ -63,7 +81,7 @@ app.on('ready', () => {
     }
     });
 
-    // Handle file data processing (for file input selections)
+    // Handle file data processing (for file input selections) with progressive updates
     ipcMain.on('process-file-data', (event, fileData) => {
         try {
             const fileName = fileData.name;
@@ -75,8 +93,13 @@ app.on('ready', () => {
             
             console.log('File saved to:', destinationPath);
             
-            // Generate waveform from the saved file
-            generateWaveform(destinationPath)
+            // Create progress callback to send updates to renderer
+            const progressCallback = (update) => {
+                event.sender.send('audio-analysis-progress', update);
+            };
+            
+            // Generate waveform from the saved file with progress updates
+            generateWaveform(destinationPath, progressCallback)
                 .then(analysisResults => {
                     // Send complete analysis data back to the renderer process
                     event.sender.send('audio-analysis-data', analysisResults);
@@ -94,6 +117,6 @@ app.on('ready', () => {
         }
     });
 
-// ...existing code...
+    checkFFmpegOnStartup(); // Check FFmpeg availability on startup
 
 });

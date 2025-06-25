@@ -4,6 +4,7 @@
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
 }
 
 
@@ -19,26 +20,40 @@ body {
   left: -250px;
   transition: left 0.3s ease;
   overflow: hidden;
+  z-index: 5;
 }
 
 .side-menu.extended {
   left: 0;
 }
 
-.title {
+
+.header {
   position: fixed;
-  top: 5px;
-  left: 50px;
+  top: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.4); /* Semi-transparent background */
+  backdrop-filter: blur(10px); /* Apply blur effect */
+  color: rgb(255, 255, 255);
+  padding: 10px;
+  z-index: 1; /* Ensure it stays above other content */
+  display: flex;
+  justify-content:flex-start;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: bold;
+  padding-left: 10px;
+  color: rgb(75, 75, 75);
 }
 
 .toggle-btn {
-  position: fixed;
-  top: 10px;
-  left: 10px;
+
   background: none;
   color: rgb(75, 75, 75);
   border: none;
-  padding: 10px;
+  padding-left: 10px;
   cursor: pointer;
   font-size: 18px;
 }
@@ -115,11 +130,10 @@ body {
 .analyse {
   margin-top: 50px;
   padding: 20px;
-  min-height: calc(100vh - 50px);
-  display: block;
-  text-align: center;
-}
 
+  justify-content: center;
+  align-items: center;
+}
 
 .drop-zone {
   display: flex;
@@ -164,9 +178,12 @@ body {
 
 /* Statistics Display Styles */
 .waveform-container {
-  margin: 20px 0;
+  margin: 20px auto;
   width: 100%;
   max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .waveform-container h3 {
@@ -176,8 +193,8 @@ body {
 
 .stats-container {
   width: 100%;
-  max-width: 1000px;
-  margin-top: 30px;
+  max-width: 800px;
+  margin: 10px auto 0 auto;
 }
 
 .stats-grid {
@@ -185,6 +202,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   padding: 20px;
+
 }
 
 .stat-card {
@@ -248,13 +266,48 @@ body {
   margin-top: 50px;
   padding: 20px;
   min-height: calc(100vh - 50px);
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
 .analyse h2 {
   margin-bottom: 20px;
   color: #333;
+}
+
+/* Progress Bar Styles */
+.progress-container {
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(249, 249, 249, 0.8);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #333;
+  text-align: center;
+  font-weight: 500;
 }
 
 /* Responsive design */
