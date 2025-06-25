@@ -157,14 +157,37 @@ ipcRenderer.on('file-copy-error', (event, error) => {
 });
 
 // Function to show the analyse section
-function showAnalyseSection(filePath) {
+function showAnalyseSection(filePathOrName) {
   contentDiv.style.display = 'none'; // Hide the content div
   analyseDiv.style.display = 'block'; // Show the analyse div
   aboutDiv.style.display = 'none'; // Hide the about div
 
-  // Extract the file name from the full file path
-  const fileName = path.basename(filePath);
+  // Extract the file name from the full file path or use filename directly
+  const fileName = filePathOrName.includes('/') || filePathOrName.includes('\\') 
+    ? path.basename(filePathOrName) 
+    : filePathOrName;
   fileInfo.textContent = `Processing: ${fileName}...`; // Display file name
+
+  // Show progress bar and reset progress
+  const progressContainer = document.getElementById('progressContainer');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  
+  progressContainer.style.display = 'block';
+  progressFill.style.width = '0%';
+  progressText.textContent = 'Starting analysis...';
+  
+  // Reset progressive waveform tracking
+  progressiveWaveform = [];
+  isAnalysisInProgress = true;
+  
+  // Clear previous waveform
+  const canvas = document.getElementById('waveformCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Reset all statistics to loading state
+  resetStatisticsToLoading();
 }
 
 
@@ -307,6 +330,35 @@ function renderProgressiveWaveform(waveformData) {
 
 // Function to update partial statistics as they become available
 function updatePartialStatistics(partialResults) {
+    // Update stats (peak level, RMS, dynamic range, brightness, noisiness) immediately
+    if (partialResults.stats) {
+        const stats = partialResults.stats;
+        
+        // Update Duration
+        const durationValue = document.getElementById('durationValue');
+        if (durationValue) durationValue.textContent = `${stats.duration}s`;
+        
+        // Update Peak Level
+        const peakValue = document.getElementById('peakValue');
+        if (peakValue) peakValue.textContent = stats.peak.toFixed(3);
+        
+        // Update RMS Level
+        const rmsValue = document.getElementById('rmsValue');
+        if (rmsValue) rmsValue.textContent = stats.rms.toFixed(3);
+        
+        // Update Dynamic Range
+        const dynamicRangeValue = document.getElementById('dynamicRangeValue');
+        if (dynamicRangeValue) dynamicRangeValue.textContent = stats.dynamicRange.toFixed(3);
+        
+        // Update Brightness (Spectral Centroid)
+        const spectralCentroidValue = document.getElementById('spectralCentroidValue');
+        if (spectralCentroidValue) spectralCentroidValue.textContent = `${stats.spectralCentroid} Hz`;
+        
+        // Update Noisiness (Zero Crossing Rate)
+        const zcrValue = document.getElementById('zcrValue');
+        if (zcrValue) zcrValue.textContent = stats.zeroCrossingRate;
+    }
+    
     if (partialResults.bpm) {
         const bpmValue = document.getElementById('bpmValue');
         const bpmConfidence = document.getElementById('bpmConfidence');
@@ -489,37 +541,6 @@ ipcRenderer.on('waveform-error', (event, error) => {
     ctx.textAlign = 'center';
     ctx.fillText('Error loading audio file', canvas.width / 2, canvas.height / 2);
 });
-
-// Function to show the analyse section
-function showAnalyseSection(fileName) {
-    contentDiv.style.display = 'none'; // Hide the content div
-    analyseDiv.style.display = 'block'; // Show the analyse div
-    aboutDiv.style.display = 'none'; // Hide the about div
-
-    const fileInfo = document.getElementById('fileInfo');
-    fileInfo.textContent = `Processing: ${fileName}...`; // Display file information
-
-    // Show progress bar and reset progress
-    const progressContainer = document.getElementById('progressContainer');
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
-    
-    progressContainer.style.display = 'block';
-    progressFill.style.width = '0%';
-    progressText.textContent = 'Starting analysis...';
-    
-    // Reset progressive waveform tracking
-    progressiveWaveform = [];
-    isAnalysisInProgress = true;
-    
-    // Clear previous waveform
-    const canvas = document.getElementById('waveformCanvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Reset all statistics to loading state
-    resetStatisticsToLoading();
-}
 
 // Function to reset statistics to loading state
 function resetStatisticsToLoading() {

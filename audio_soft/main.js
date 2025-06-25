@@ -26,6 +26,7 @@ app.on('ready', async () => {
         height: 600,
         minWidth: 600,
         minHeight: 500,
+        title: 'SoundStat',
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -65,6 +66,11 @@ app.on('ready', async () => {
 
         generateWaveform(destinationPath, progressCallback)
             .then(analysisResults => {
+                // Add file information to analysis results
+                const stats = fs.statSync(destinationPath);
+                analysisResults.fileName = fileName;
+                analysisResults.fileSize = stats.size;
+                
                 // Send complete analysis data back to the renderer process
                 event.sender.send('audio-analysis-data', analysisResults);
             })
@@ -101,6 +107,11 @@ app.on('ready', async () => {
             // Generate waveform from the saved file with progress updates
             generateWaveform(destinationPath, progressCallback)
                 .then(analysisResults => {
+                    // Add file information to analysis results
+                    const stats = fs.statSync(destinationPath);
+                    analysisResults.fileName = fileName;
+                    analysisResults.fileSize = stats.size;
+                    
                     // Send complete analysis data back to the renderer process
                     event.sender.send('audio-analysis-data', analysisResults);
                 })

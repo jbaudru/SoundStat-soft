@@ -4,23 +4,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Side Menu</title>
+  <title>SoundStat</title>
   <link rel="stylesheet" href="static/styles.css">
 </head>
 
 <body>
     <div class="header">
         <button class="toggle-btn" onclick="toggleMenu()">☰</button>
-        <h5 class="title">SoundStats</h5>
+        <h5 class="title">SoundStat</h5>
     </div>
 
     <div class="side-menu" id="sideMenu">
     <ul class="menu-items">
-        <li id="uploadMenu"><a href="#">Upload</a></li>
-        <li id="analyseMenu"><a href="#">Analyse</a></li>
-        <li id="aboutMenu"><a href="#">About</a></li>
+        <li id="uploadMenu"><a href="#"><span class="menu-icon">📁</span>Upload</a></li>
+        <li id="analyseMenu"><a href="#"><span class="menu-icon">📊</span>Analyse</a></li>
+        <li id="aboutMenu"><a href="#"><span class="menu-icon">ℹ️</span>About</a></li>
     </ul>
-    <button class="hide-btn" onclick="toggleMenu()">Hide</button>
+    <button class="hide-btn" onclick="toggleMenu()">← Hide</button>
     </div>
 
     <div class="content">
@@ -37,7 +37,7 @@
     </div>
 
     <div class="analyse" id="analyseSection" style="display: none;">
-        <h2>Results</h2>
+
         <p id="fileInfo"></p>
         
         <!-- Progress Bar for Analysis -->
@@ -119,8 +119,8 @@
 
 
     <div class="about" id="aboutSection" style="display: none;">
-        <h2>About SoundStats</h2>
-        <p>SoundStats is a free and open-source sound analysis tool.</p>
+        <h2>About SoundStat</h2>
+        <p>SoundStat is a free and open-source sound analysis tool.</p>
         <p>Developed by <a href="" target="_blank">Your Name</a>.</p>
         <p>Version: 1.0.0</p>
         <p>License: MIT</p>

@@ -9,18 +9,21 @@ body {
 
 
 .side-menu {
-  width: 250px;
+  width: 280px;
   height: 100vh;
-  background-color: rgba(51, 51, 51, 0.4); /* Semi-transparent background */
-  backdrop-filter: blur(10px); /* Apply blur effect */
+  background: linear-gradient(145deg, rgba(30, 30, 35, 0.95), rgba(45, 45, 50, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: rgb(255, 255, 255);
   position: fixed;
-  border-radius: 0 10px 10px 0; /* Rounded corners at the bottom */
+  border-radius: 0 20px 20px 0;
   top: 0;
-  left: -250px;
-  transition: left 0.3s ease;
+  left: -280px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   z-index: 5;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .side-menu.extended {
@@ -49,53 +52,110 @@ body {
 }
 
 .toggle-btn {
-
-  background: none;
+  background: linear-gradient(135deg, rgba(75, 75, 75, 0.1), rgba(75, 75, 75, 0.05));
   color: rgb(75, 75, 75);
-  border: none;
-  padding-left: 10px;
+  border: 1px solid rgba(75, 75, 75, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-left: 10px;
   cursor: pointer;
   font-size: 18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+}
+
+.toggle-btn:hover {
+  background: linear-gradient(135deg, rgba(75, 75, 75, 0.2), rgba(75, 75, 75, 0.1));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(75, 75, 75, 0.2);
 }
 
 .hide-btn {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background: none;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
   color: rgb(255, 255, 255);
-  border: none;
-  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 25px;
+  padding: 12px 24px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+}
+
+.hide-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .menu-items {
   list-style: none;
-  padding: 0;
+  padding: 60px 0 0 0;
   margin: 0;
 }
 
 .menu-items li {
-  padding: 10px;
-  text-align: left;
-  width: 100%; /* Ensures the menu items take the full width */
-  box-sizing: border-box; /* Prevents padding from affecting width */
+  margin: 8px 20px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.menu-items li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.menu-items li:hover::before {
+  left: 100%;
 }
 
 .menu-items li:hover {
-  background-color: rgb(207, 207, 207, 0.2); /* Change background color on hover */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+  transform: translateX(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   cursor: pointer;
 }
 
-.menu-items li:hover a {
-  color: rgb(75, 75, 75); /* Change the color of the <a> when hovering over the <li> */
+.menu-items li:active {
+  transform: translateX(4px) scale(0.98);
 }
 
 .menu-items li a {
   color: rgb(255, 255, 255);
   text-decoration: none;
-  width: 100%; /* Ensures links take the full width */
+  display: block;
+  padding: 16px 20px;
+  font-weight: 500;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.menu-items li:hover a {
+  color: rgb(255, 255, 255);
+  font-weight: 600;
+}
+
+.menu-icon {
+  display: inline-block;
+  margin-right: 12px;
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
 }
 
 
@@ -279,11 +339,13 @@ body {
 
 /* Progress Bar Styles */
 .progress-container {
-  margin: 20px 0;
-  padding: 15px;
+  margin: 20px auto;
+
   background: rgba(249, 249, 249, 0.8);
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+
+  width: 100%;
+  max-width: 800px;
 }
 
 .progress-bar {
