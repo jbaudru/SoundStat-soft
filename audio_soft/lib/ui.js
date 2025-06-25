@@ -1,5 +1,3 @@
-
-
 function toggleMenu() {
   const sideMenu = document.getElementById('sideMenu');
   if (sideMenu) {
@@ -46,7 +44,7 @@ uploadMenu.addEventListener('click', () => {
 // Show the analyse div and hide other divs when clicking "Analyse"
 analyseMenu.addEventListener('click', () => {
   contentDiv.style.display = 'none'; // Hide the content div
-  analyseDiv.style.display = 'flex'; // Show the analyse div
+  analyseDiv.style.display = 'block'; // Show the analyse div
   aboutDiv.style.display = 'none'; // Hide the about div
 });
 
@@ -161,23 +159,33 @@ ipcRenderer.on('file-copy-error', (event, error) => {
 // Function to show the analyse section
 function showAnalyseSection(filePath) {
   contentDiv.style.display = 'none'; // Hide the content div
-  analyseDiv.style.display = 'flex'; // Show the analyse div
+  analyseDiv.style.display = 'block'; // Show the analyse div
   aboutDiv.style.display = 'none'; // Hide the about div
 
   // Extract the file name from the full file path
   const fileName = path.basename(filePath);
-  fileInfo.textContent = `Uploaded File: ${fileName}`; // Display file name
+  fileInfo.textContent = `Processing: ${fileName}...`; // Display file name
 }
 
 
-// Listen for waveform data from the main process
-// ...existing code...
+// Listen for complete audio analysis data from the main process
+ipcRenderer.on('audio-analysis-data', (event, analysisResults) => {
+    console.log('Received audio analysis data:', analysisResults);
 
-// Listen for waveform data from the main process
-ipcRenderer.on('waveform-data', (event, waveform) => {
-    console.log('Received waveform data:', waveform);
+    // Update file info
+    const fileName = analysisResults.fileName;
+    const fileSize = (analysisResults.fileSize / 1024 / 1024).toFixed(2); // Convert to MB
+    fileInfo.textContent = `${fileName} (${fileSize} MB)`;
 
-    // Render the waveform on a canvas
+    // Render the waveform
+    renderWaveform(analysisResults.waveform);
+    
+    // Update all statistics
+    updateStatistics(analysisResults);
+});
+
+// Function to render waveform
+function renderWaveform(waveform) {
     const canvas = document.getElementById('waveformCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -199,46 +207,146 @@ ipcRenderer.on('waveform-data', (event, waveform) => {
     // Clear the canvas
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    // Disable image smoothing for crisp lines
-    ctx.imageSmoothingEnabled = false;
+    // Set waveform style
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#4facfe';
+    ctx.fillStyle = 'rgba(79, 172, 254, 0.1)';
 
-    // Set precise line properties
-    ctx.lineWidth = 1; // Use 1px for crisp lines
-    ctx.strokeStyle = '#000000';
-    ctx.lineCap = 'butt'; // Sharp line ends for precision
-    ctx.lineJoin = 'miter'; // Sharp line joins
+    if (waveform && waveform.length > 0) {
+        // Scale the waveform data to fit the canvas
+        const maxAmplitude = Math.max(...waveform.map(point => Math.abs(point.y)));
+        const scaleX = rect.width / waveform.length;
+        const scaleY = rect.height / (2 * maxAmplitude);
+        const centerY = rect.height / 2;
 
-    // Scale the waveform data to fit the canvas
-    const maxAmplitude = Math.max(...waveform.map(point => Math.abs(point.y)));
-    const scaleX = rect.width / waveform.length;
-    const scaleY = rect.height / (2 * maxAmplitude);
-
-    ctx.beginPath();
-    waveform.forEach((point, index) => {
-        // Round coordinates to pixel boundaries for crisp rendering
-        const x = Math.round(index * scaleX) + 0.5; // +0.5 for pixel-perfect lines
-        const y = Math.round(rect.height / 2 - point.y * scaleY) + 0.5;
+        // Draw filled waveform
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
         
-        if (index === 0) {
-            ctx.moveTo(x, y);
-        } else {
+        waveform.forEach((point, index) => {
+            const x = index * scaleX;
+            const y = centerY - point.y * scaleY;
             ctx.lineTo(x, y);
-        }
-    });
-    ctx.stroke();
-});
+        });
+        
+        ctx.lineTo(rect.width, centerY);
+        ctx.closePath();
+        ctx.fill();
 
-// ...existing code...
+        // Draw waveform outline
+        ctx.beginPath();
+        waveform.forEach((point, index) => {
+            const x = index * scaleX;
+            const y = centerY - point.y * scaleY;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.stroke();
+
+        // Draw center line
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(rect.width, centerY);
+        ctx.stroke();
+    }
+}
+
+// Function to update all statistics
+function updateStatistics(analysisResults) {
+    const { bpm, key, stats } = analysisResults;
+    
+    // Update BPM
+    const bpmValue = document.getElementById('bpmValue');
+    const bpmConfidence = document.getElementById('bpmConfidence');
+    if (bpm.bpm > 0) {
+        bpmValue.textContent = bpm.bpm;
+        bpmConfidence.textContent = `Confidence: ${(bpm.confidence * 100).toFixed(1)}%`;
+    } else {
+        bpmValue.textContent = 'N/A';
+        bpmConfidence.textContent = 'Could not detect';
+    }
+    
+    // Update Key Detection
+    const keyValue = document.getElementById('keyValue');
+    const dominantFreq = document.getElementById('dominantFreq');
+    keyValue.textContent = key.note;
+    dominantFreq.textContent = `Freq: ${key.dominantFreq} Hz`;
+    
+    // Update Duration
+    const durationValue = document.getElementById('durationValue');
+    durationValue.textContent = `${stats.duration}s`;
+    
+    // Update Peak Level
+    const peakValue = document.getElementById('peakValue');
+    peakValue.textContent = stats.peak.toFixed(3);
+    
+    // Update RMS Level
+    const rmsValue = document.getElementById('rmsValue');
+    rmsValue.textContent = stats.rms.toFixed(3);
+    
+    // Update Dynamic Range
+    const dynamicRangeValue = document.getElementById('dynamicRangeValue');
+    dynamicRangeValue.textContent = stats.dynamicRange.toFixed(3);
+    
+    // Update Spectral Centroid (Brightness)
+    const spectralCentroidValue = document.getElementById('spectralCentroidValue');
+    spectralCentroidValue.textContent = `${stats.spectralCentroid} Hz`;
+    
+    // Update Zero Crossing Rate (Noisiness)
+    const zcrValue = document.getElementById('zcrValue');
+    zcrValue.textContent = stats.zeroCrossingRate;
+}
+
+// Listen for waveform errors from the main process
+ipcRenderer.on('waveform-error', (event, error) => {
+    console.error('Waveform generation error:', error);
+    
+    // Update file info to show error
+    fileInfo.textContent = `Error processing file: ${error}`;
+    
+    // Reset all statistics to default values
+    const defaultStats = {
+        bpm: { bpm: 0, confidence: 0 },
+        key: { note: 'Error', dominantFreq: 0 },
+        stats: {
+            duration: 0,
+            peak: 0,
+            rms: 0,
+            dynamicRange: 0,
+            spectralCentroid: 0,
+            zeroCrossingRate: 0
+        }
+    };
+    
+    updateStatistics(defaultStats);
+    
+    // Clear waveform canvas
+    const canvas = document.getElementById('waveformCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Display error message on canvas
+    ctx.fillStyle = '#ff4444';
+    ctx.font = '16px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText('Error loading audio file', canvas.width / 2, canvas.height / 2);
+});
 
 // Function to show the analyse section
 function showAnalyseSection(fileName) {
     
     contentDiv.style.display = 'none'; // Hide the content div
-    analyseDiv.style.display = 'flex'; // Show the analyse div
+    analyseDiv.style.display = 'block'; // Show the analyse div
     aboutDiv.style.display = 'none'; // Hide the about div
 
     const fileInfo = document.getElementById('fileInfo');
-    fileInfo.textContent = fileName; // Display file information
+    fileInfo.textContent = `Processing: ${fileName}...`; // Display file information
 
     // Ensure the canvas is visible
     const canvas = document.getElementById('waveformCanvas');

@@ -114,12 +114,10 @@ body {
 
 .analyse {
   margin-top: 50px;
-  display: flex;
-  flex-direction: column; /* Align elements vertically */
-  justify-content: center; /* Center elements vertically */
-  align-items: center; /* Center elements horizontally */
-  height: 80vh; /* Make the content div take the full viewport height */
-  text-align: center; /* Center text inside the elements */
+  padding: 20px;
+  min-height: calc(100vh - 50px);
+  display: block;
+  text-align: center;
 }
 
 
@@ -156,9 +154,127 @@ body {
 }
 
 .waveform {
-  width: 600px;
-  height: auto;
-  margin-top: 20px;
-  color: #000;
+  width: 100%;
+  max-width: 800px;
+  height: 200px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+/* Statistics Display Styles */
+.waveform-container {
+  margin: 20px 0;
+  width: 100%;
+  max-width: 800px;
+}
+
+.waveform-container h3 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.stats-container {
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 30px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  color: white;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card:nth-child(even) {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-card:nth-child(3n) {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-card:nth-child(4n) {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 10px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 5px;
+}
+
+.confidence, .frequency {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* Update analyse section to handle new layout */
+.analyse {
+  margin-top: 50px;
+  padding: 20px;
+  min-height: calc(100vh - 50px);
+  display: block;
+  text-align: center;
+}
+
+.analyse h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 15px;
+  }
+  
+  .stat-card {
+    padding: 15px;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .waveform {
+    height: 150px;
+  }
 }
 

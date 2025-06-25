@@ -37,7 +37,75 @@
     <div class="analyse" id="analyseSection" style="display: none;">
         <h2>Results</h2>
         <p id="fileInfo"></p>
-        <canvas class="waveform" id="waveformCanvas"></canvas>
+        
+        <!-- Waveform Display -->
+        <div class="waveform-container">
+            <h3>Waveform</h3>
+            <canvas class="waveform" id="waveformCanvas"></canvas>
+        </div>
+        
+        <!-- Audio Statistics -->
+        <div class="stats-container">
+            <div class="stats-grid">
+                <!-- BPM Analysis -->
+                <div class="stat-card">
+                    <h3>BPM Analysis</h3>
+                    <div class="stat-value" id="bpmValue">--</div>
+                    <div class="stat-label">Beats Per Minute</div>
+                    <div class="confidence" id="bpmConfidence">Confidence: --</div>
+                </div>
+                
+                <!-- Key Detection -->
+                <div class="stat-card">
+                    <h3>Key Detection</h3>
+                    <div class="stat-value" id="keyValue">--</div>
+                    <div class="stat-label">Musical Key</div>
+                    <div class="frequency" id="dominantFreq">Freq: -- Hz</div>
+                </div>
+                
+                <!-- Duration -->
+                <div class="stat-card">
+                    <h3>Duration</h3>
+                    <div class="stat-value" id="durationValue">--</div>
+                    <div class="stat-label">Seconds</div>
+                </div>
+                
+                <!-- Audio Quality -->
+                <div class="stat-card">
+                    <h3>Peak Level</h3>
+                    <div class="stat-value" id="peakValue">--</div>
+                    <div class="stat-label">Peak Amplitude</div>
+                </div>
+                
+                <!-- RMS Level -->
+                <div class="stat-card">
+                    <h3>RMS Level</h3>
+                    <div class="stat-value" id="rmsValue">--</div>
+                    <div class="stat-label">Average Loudness</div>
+                </div>
+                
+                <!-- Dynamic Range -->
+                <div class="stat-card">
+                    <h3>Dynamic Range</h3>
+                    <div class="stat-value" id="dynamicRangeValue">--</div>
+                    <div class="stat-label">Peak - RMS</div>
+                </div>
+                
+                <!-- Spectral Centroid -->
+                <div class="stat-card">
+                    <h3>Brightness</h3>
+                    <div class="stat-value" id="spectralCentroidValue">--</div>
+                    <div class="stat-label">Spectral Centroid (Hz)</div>
+                </div>
+                
+                <!-- Zero Crossing Rate -->
+                <div class="stat-card">
+                    <h3>Noisiness</h3>
+                    <div class="stat-value" id="zcrValue">--</div>
+                    <div class="stat-label">Zero Crossings/sec</div>
+                </div>
+            </div>
+        </div>
     </div>
 
 

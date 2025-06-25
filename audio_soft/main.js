@@ -9,6 +9,8 @@ app.on('ready', () => {
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
+        minWidth: 600,
+        minHeight: 500,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -44,9 +46,9 @@ app.on('ready', () => {
         fs.copyFileSync(originalFilePath, destinationPath);
 
         generateWaveform(destinationPath)
-            .then(waveform => {
-                // Send waveform data back to the renderer process
-                event.sender.send('waveform-data', waveform);
+            .then(analysisResults => {
+                // Send complete analysis data back to the renderer process
+                event.sender.send('audio-analysis-data', analysisResults);
             })
             .catch(error => {
                 console.error('Error generating waveform:', error);
@@ -75,9 +77,9 @@ app.on('ready', () => {
             
             // Generate waveform from the saved file
             generateWaveform(destinationPath)
-                .then(waveform => {
-                    // Send waveform data back to the renderer process
-                    event.sender.send('waveform-data', waveform);
+                .then(analysisResults => {
+                    // Send complete analysis data back to the renderer process
+                    event.sender.send('audio-analysis-data', analysisResults);
                 })
                 .catch(error => {
                     console.error('Error generating waveform:', error);
