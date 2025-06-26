@@ -75,7 +75,7 @@ app.on('ready', async () => {
     mainWindow.loadFile('index.html');
 
     // Remove the default menu
-    //Menu.setApplicationMenu(null);
+    Menu.setApplicationMenu(null);
 
     // Listen for menu toggle requests
     ipcMain.on('toggle-menu', () => {
