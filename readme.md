@@ -2,6 +2,7 @@
 
 - minor/major detection
 - bpm between 70 and 190
+- Default wave form
 - convertion tool (mp3 to wav, aiff, flac)
 - stereo to mono, mono to stereo
 - normalize volume
