@@ -18,6 +18,7 @@
     <ul class="menu-items">
         <li id="uploadMenu"><a href="#"><span class="menu-icon">📁</span>Upload</a></li>
         <li id="analyseMenu"><a href="#"><span class="menu-icon">📊</span>Analyse</a></li>
+        <li id="toolMenu"><a href="#"><span class="menu-icon">🛠️</span>Tool</a></li>
         <li id="aboutMenu"><a href="#"><span class="menu-icon">ℹ️</span>About</a></li>
     </ul>
     <button class="hide-btn" onclick="toggleMenu()">← Hide</button>
@@ -127,10 +128,129 @@
     </div>
 
 
+    <div class="tool" id="toolSection" style="display: none;">
+        
+        <p>Transform your uploaded audio files with various conversion and processing options.</p>
+        
+        <!-- File Selection for Tool -->
+        <div class="tool-file-selector">
+            <label for="toolFileSelect">Select file to transform:</label>
+            <select id="toolFileSelect" class="file-select">
+                <option value="">No files uploaded</option>
+            </select>
+        </div>
+
+        <!-- Conversion Tools Section -->
+        <div class="tool-section">
+            <h3>Format Conversion</h3>
+            <div class="tool-group">
+                <label for="outputFormat">Output Format:</label>
+                <select id="outputFormat" class="tool-select">
+                    <option value="wav">WAV</option>
+                    <option value="mp3">MP3</option>
+                    <option value="flac">FLAC</option>
+                    <option value="aiff">AIFF</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Audio Processing Section -->
+        <div class="tool-section">
+            <h3>Audio Processing</h3>
+            
+            <!-- Channel Configuration -->
+            <div class="tool-group">
+                <label for="channelConfig">Channel Configuration:</label>
+                <select id="channelConfig" class="tool-select">
+                    <option value="">Keep original</option>
+                    <option value="mono">Convert to Mono</option>
+                    <option value="stereo">Convert to Stereo</option>
+                </select>
+            </div>
+
+            <!-- Bit Depth -->
+            <div class="tool-group">
+                <label for="bitDepth">Bit Depth:</label>
+                <select id="bitDepth" class="tool-select">
+                    <option value="">Keep original</option>
+                    <option value="16">16-bit</option>
+                    <option value="24">24-bit</option>
+                    <option value="32">32-bit</option>
+                </select>
+            </div>
+
+            <!-- Sample Rate -->
+            <div class="tool-group">
+                <label for="sampleRate">Sample Rate:</label>
+                <select id="sampleRate" class="tool-select">
+                    <option value="">Keep original</option>
+                    <option value="44100">44.1 kHz</option>
+                    <option value="48000">48 kHz</option>
+                    <option value="96000">96 kHz</option>
+                </select>
+            </div>
+
+            <!-- Volume Normalization -->
+            <div class="tool-group">
+                <label>
+                    <input type="checkbox" id="normalizeVolume" class="tool-checkbox">
+                    Normalize Volume
+                </label>
+                <div class="tool-subgroup" id="normalizeOptions" style="display: none;">
+                    <label for="targetLevel">Target Level (dB):</label>
+                    <input type="number" id="targetLevel" class="tool-input" value="-3" min="-30" max="0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Settings -->
+        <div class="tool-section">
+            <h3>Output Settings</h3>
+            <div class="tool-group">
+                <label for="outputName">Output Filename:</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="text" id="outputName" class="tool-input" placeholder="transformed_audio">
+                    <span class="output-extension" id="outputExtension">.wav</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="tool-actions">
+            <button id="previewBtn" class="tool-btn preview-btn" disabled>Preview Settings</button>
+            <button id="transformBtn" class="tool-btn transform-btn" disabled>Transform Audio</button>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="tool-progress" id="toolProgress" style="display: none;">
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="toolProgressFill"></div>
+                </div>
+                <div class="progress-text" id="toolProgressText">Processing...</div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="tool-results" id="toolResults" style="display: none;">
+            <h3>Transformation Complete</h3>
+            <div class="result-info">
+                <p>Original file: <span id="originalFileName"></span></p>
+                <p>Transformed file: <span id="transformedFileName"></span></p>
+                <p>File size: <span id="transformedFileSize"></span></p>
+            </div>
+            <div class="result-actions">
+                <button id="playOriginalBtn" class="tool-btn secondary-btn">Play Original</button>
+                <button id="playTransformedBtn" class="tool-btn secondary-btn">Play Transformed</button>
+                <button id="saveTransformedBtn" class="tool-btn primary-btn">Save to Computer</button>
+            </div>
+        </div>
+    </div>
+
     <div class="about" id="aboutSection" style="display: none;">
         <h2>About SoundStat</h2>
         <p>SoundStat is a free and open-source sound analysis tool.</p>
-        <p>Developed by <a href="" target="_blank">Your Name</a>.</p>
+        <p>Developed by <a class="simple-link" href="https://github.com/jbaudru" target="_blank">ce2lo</a>.</p>
         <p>Version: 1.0.0</p>
         <p>License: MIT</p>
     </div>

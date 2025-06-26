@@ -17,9 +17,12 @@ const soundFileInput = document.getElementById('soundFile');
 const contentDiv = document.querySelector('.content');
 const analyseDiv = document.getElementById('analyseSection');
 const aboutDiv = document.getElementById('aboutSection');
+const toolDiv = document.getElementById('toolSection');
 const fileInfo = document.getElementById('fileInfo');
 const uploadMenu = document.getElementById('uploadMenu');
 const analyseMenu = document.getElementById('analyseMenu');
+const toolMenu = document.getElementById('toolMenu');
+const aboutMenu = document.getElementById('aboutMenu');
 
 document.addEventListener('click', (event) => {
   const sideMenu = document.getElementById('sideMenu');
@@ -39,6 +42,7 @@ uploadMenu.addEventListener('click', () => {
   contentDiv.style.display = 'flex'; // Show the content div
   analyseDiv.style.display = 'none'; // Hide the analyse div
   aboutDiv.style.display = 'none'; // Hide the about div
+  toolDiv.style.display = 'none'; // Hide the tool div
 });
 
 // Show the analyse div and hide other divs when clicking "Analyse"
@@ -46,6 +50,7 @@ analyseMenu.addEventListener('click', () => {
   contentDiv.style.display = 'none'; // Hide the content div
   analyseDiv.style.display = 'block'; // Show the analyse div
   aboutDiv.style.display = 'none'; // Hide the about div
+  toolDiv.style.display = 'none'; // Hide the tool div
 });
 
 // Show the about div and hide other divs when clicking "About"
@@ -53,6 +58,16 @@ aboutMenu.addEventListener('click', () => {
   contentDiv.style.display = 'none'; // Hide the content div
   analyseDiv.style.display = 'none'; // Hide the analyse div
   aboutDiv.style.display = 'flex'; // Show the about div
+  toolDiv.style.display = 'none'; // Hide the tool div
+});
+
+// Show the tool div and hide other divs when clicking "Tool"
+toolMenu.addEventListener('click', () => {
+  contentDiv.style.display = 'none'; // Hide the content div
+  analyseDiv.style.display = 'none'; // Hide the analyse div
+  aboutDiv.style.display = 'none'; // Hide the about div
+  toolDiv.style.display = 'block'; // Show the tool div
+  updateToolFileList(); // Update the file list when opening tools
 });
 
 // Open file explorer when clicking on the drop-zone
@@ -148,6 +163,8 @@ ipcRenderer.on('file-copy-success', (event, copiedFilePath) => {
   console.log('File successfully copied to:', copiedFilePath);
   // Set the audio file for playback
   setAudioFile(copiedFilePath);
+  // Add to uploaded files list for tool processing
+  addToUploadedFiles(copiedFilePath);
   // Now send the copied file path for processing
   ipcRenderer.send('file-uploaded', copiedFilePath);
 });
@@ -163,6 +180,7 @@ function showAnalyseSection(filePathOrName) {
   contentDiv.style.display = 'none'; // Hide the content div
   analyseDiv.style.display = 'block'; // Show the analyse div
   aboutDiv.style.display = 'none'; // Hide the about div
+  toolDiv.style.display = 'none'; // Hide the tool div
 
   // Extract the file name from the full file path or use filename directly
   const fileName = filePathOrName.includes('/') || filePathOrName.includes('\\') 
@@ -736,4 +754,212 @@ function initializeWaveformSeek() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeAudioPlayer();
     initializeWaveformSeek();
+    initializeToolFunctionality();
 });
+
+// ===== TOOL FUNCTIONALITY =====
+
+// Store uploaded files for tool processing
+let uploadedFiles = [];
+let selectedToolFile = null;
+
+// Initialize all tool functionality
+function initializeToolFunctionality() {
+    const outputFormatSelect = document.getElementById('outputFormat');
+    const outputExtensionSpan = document.getElementById('outputExtension');
+    const normalizeCheckbox = document.getElementById('normalizeVolume');
+    const normalizeOptions = document.getElementById('normalizeOptions');
+    const toolFileSelect = document.getElementById('toolFileSelect');
+    const previewBtn = document.getElementById('previewBtn');
+    const transformBtn = document.getElementById('transformBtn');
+
+    // Update output extension when format changes
+    outputFormatSelect.addEventListener('change', () => {
+        outputExtensionSpan.textContent = '.' + outputFormatSelect.value;
+    });
+
+    // Show/hide normalize options
+    normalizeCheckbox.addEventListener('change', () => {
+        normalizeOptions.style.display = normalizeCheckbox.checked ? 'block' : 'none';
+    });
+
+    // Handle file selection
+    toolFileSelect.addEventListener('change', () => {
+        const selectedValue = toolFileSelect.value;
+        selectedToolFile = selectedValue ? uploadedFiles.find(f => f.path === selectedValue) : null;
+        updateToolButtons();
+        if (selectedToolFile) {
+            document.getElementById('outputName').value = `transformed_${path.parse(selectedToolFile.path).name}`;
+        }
+    });
+
+    // Preview button
+    previewBtn.addEventListener('click', previewTransformation);
+
+    // Transform button
+    transformBtn.addEventListener('click', executeTransformation);
+}
+
+// Update the list of files available for transformation
+function updateToolFileList() {
+    const toolFileSelect = document.getElementById('toolFileSelect');
+    toolFileSelect.innerHTML = '<option value="">Select a file to transform</option>';
+    
+    uploadedFiles.forEach(file => {
+        const option = document.createElement('option');
+        option.value = file.path;
+        option.textContent = path.basename(file.path);
+        toolFileSelect.appendChild(option);
+    });
+
+    updateToolButtons();
+}
+
+// Update tool button states
+function updateToolButtons() {
+    const previewBtn = document.getElementById('previewBtn');
+    const transformBtn = document.getElementById('transformBtn');
+    const hasSelectedFile = selectedToolFile !== null;
+    
+    previewBtn.disabled = !hasSelectedFile;
+    transformBtn.disabled = !hasSelectedFile;
+}
+
+// Add a file to the uploaded files list (called when files are uploaded)
+function addToUploadedFiles(filePath) {
+    const fileObj = { path: filePath, name: path.basename(filePath) };
+    if (!uploadedFiles.find(f => f.path === filePath)) {
+        uploadedFiles.push(fileObj);
+    }
+}
+
+// Preview transformation settings
+function previewTransformation() {
+    if (!selectedToolFile) return;
+
+    const settings = getTransformationSettings();
+    let previewText = `Transformation Preview:\n\n`;
+    previewText += `Input File: ${selectedToolFile.name}\n`;
+    previewText += `Output Format: ${settings.outputFormat.toUpperCase()}\n`;
+    
+    if (settings.channelConfig) {
+        previewText += `Channels: ${settings.channelConfig === 'mono' ? 'Mono (1 channel)' : 'Stereo (2 channels)'}\n`;
+    }
+    
+    if (settings.bitDepth) {
+        previewText += `Bit Depth: ${settings.bitDepth}-bit\n`;
+    }
+    
+    if (settings.sampleRate) {
+        previewText += `Sample Rate: ${parseInt(settings.sampleRate).toLocaleString()} Hz\n`;
+    }
+    
+    if (settings.normalize) {
+        previewText += `Volume Normalization: Enabled (Target: ${settings.targetLevel}dB)\n`;
+    }
+    
+    previewText += `Output File: ${settings.outputName}.${settings.outputFormat}`;
+    
+    alert(previewText);
+}
+
+// Get current transformation settings
+function getTransformationSettings() {
+    return {
+        outputFormat: document.getElementById('outputFormat').value,
+        channelConfig: document.getElementById('channelConfig').value,
+        bitDepth: document.getElementById('bitDepth').value,
+        sampleRate: document.getElementById('sampleRate').value,
+        normalize: document.getElementById('normalizeVolume').checked,
+        targetLevel: document.getElementById('targetLevel').value,
+        outputName: document.getElementById('outputName').value || 'transformed_audio'
+    };
+}
+
+// Execute the audio transformation
+function executeTransformation() {
+    if (!selectedToolFile) return;
+
+    const settings = getTransformationSettings();
+    const progressContainer = document.getElementById('toolProgress');
+    const progressFill = document.getElementById('toolProgressFill');
+    const progressText = document.getElementById('toolProgressText');
+    const resultsContainer = document.getElementById('toolResults');
+
+    // Show progress
+    progressContainer.style.display = 'block';
+    resultsContainer.style.display = 'none';
+    progressFill.style.width = '0%';
+    progressText.textContent = 'Starting transformation...';
+
+    // Send transformation request to main process
+    const transformationData = {
+        inputFile: selectedToolFile.path,
+        settings: settings
+    };
+
+    ipcRenderer.send('transform-audio', transformationData);
+
+    // Listen for progress updates
+    ipcRenderer.once('transform-progress', (event, data) => {
+        progressFill.style.width = data.progress + '%';
+        progressText.textContent = data.message;
+    });
+
+    // Listen for completion
+    ipcRenderer.once('transform-complete', (event, data) => {
+        progressContainer.style.display = 'none';
+        
+        if (data.success) {
+            showTransformationResults(data);
+        } else {
+            alert('Transformation failed: ' + data.error);
+        }
+    });
+
+    // Listen for errors
+    ipcRenderer.once('transform-error', (event, error) => {
+        progressContainer.style.display = 'none';
+        alert('Transformation error: ' + error);
+    });
+}
+
+// Show transformation results
+function showTransformationResults(data) {
+    const resultsContainer = document.getElementById('toolResults');
+    const originalFileName = document.getElementById('originalFileName');
+    const transformedFileName = document.getElementById('transformedFileName');
+    const transformedFileSize = document.getElementById('transformedFileSize');
+    
+    originalFileName.textContent = path.basename(data.originalFile);
+    transformedFileName.textContent = path.basename(data.outputFile);
+    transformedFileSize.textContent = formatFileSize(data.fileSize);
+    
+    resultsContainer.style.display = 'block';
+    
+    // Set up result action buttons
+    document.getElementById('playOriginalBtn').onclick = () => playAudioFile(data.originalFile);
+    document.getElementById('playTransformedBtn').onclick = () => playAudioFile(data.outputFile);
+    document.getElementById('saveTransformedBtn').onclick = () => saveTransformedFile(data.outputFile);
+}
+
+// Format file size for display
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Play an audio file
+function playAudioFile(filePath) {
+    const audioPlayer = document.getElementById('audioPlayer');
+    audioPlayer.src = 'file://' + filePath;
+    audioPlayer.play();
+}
+
+// Save transformed file to user's chosen location
+function saveTransformedFile(filePath) {
+    ipcRenderer.send('save-transformed-file', filePath);
+}

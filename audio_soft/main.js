@@ -1,10 +1,12 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const { generateWaveform } = require('./lib/sound'); // Import waveform generation function
+const AudioTransformer = require('./lib/audioTransformer'); // Import audio transformer
 const fs = require('fs'); // Import file system module for file existence checks
 const path = require('path');
 const FFmpegInstaller = require('./lib/ffmpegInstaller');
 
 let mainWindow;
+const audioTransformer = new AudioTransformer();
 
 // Check FFmpeg on startup
 async function checkFFmpegOnStartup() {
@@ -41,6 +43,18 @@ function cleanupSoundFolder() {
     }
 }
 
+// Audio transformation function using AudioTransformer
+async function transformAudio(inputFile, settings, progressCallback) {
+    // Validate settings first
+    const validationErrors = audioTransformer.validateSettings(settings);
+    if (validationErrors.length > 0) {
+        throw new Error(`Invalid settings: ${validationErrors.join(', ')}`);
+    }
+    
+    // Perform the transformation
+    return await audioTransformer.transform(inputFile, settings, progressCallback);
+}
+
 app.on('ready', async () => {
     // Check FFmpeg availability on startup
     await checkFFmpegOnStartup();
@@ -61,7 +75,7 @@ app.on('ready', async () => {
     mainWindow.loadFile('index.html');
 
     // Remove the default menu
-    Menu.setApplicationMenu(null);
+    //Menu.setApplicationMenu(null);
 
     // Listen for menu toggle requests
     ipcMain.on('toggle-menu', () => {
@@ -99,14 +113,14 @@ app.on('ready', async () => {
                 event.sender.send('audio-analysis-data', analysisResults);
                 
                 // Clean up sound folder after analysis
-                cleanupSoundFolder();
+                //cleanupSoundFolder();
             })
             .catch(error => {
                 console.error('Error generating waveform:', error);
                 event.sender.send('waveform-error', error.message);
                 
                 // Clean up sound folder even on error
-                cleanupSoundFolder();
+                //cleanupSoundFolder();
             });
         
         // Send success message with the new file path
@@ -146,14 +160,14 @@ app.on('ready', async () => {
                     event.sender.send('audio-analysis-data', analysisResults);
                     
                     // Clean up sound folder after analysis
-                    cleanupSoundFolder();
+                    //cleanupSoundFolder();
                 })
                 .catch(error => {
                     console.error('Error generating waveform:', error);
                     event.sender.send('waveform-error', error.message);
                     
                     // Clean up sound folder even on error
-                    cleanupSoundFolder();
+                    //cleanupSoundFolder();
                 });
             
             // Send success message with the new file path
@@ -164,6 +178,57 @@ app.on('ready', async () => {
         }
     });
 
+    // Handle audio transformation requests
+    ipcMain.on('transform-audio', async (event, transformationData) => {
+        try {
+            const { inputFile, settings } = transformationData;
+            const result = await transformAudio(inputFile, settings, (progress) => {
+                event.sender.send('transform-progress', progress);
+            });
+            
+            event.sender.send('transform-complete', result);
+        } catch (error) {
+            console.error('Transformation error:', error);
+            event.sender.send('transform-error', error.message);
+        }
+    });
+
+    // Handle save transformed file requests
+    ipcMain.on('save-transformed-file', (event, filePath) => {
+        const { dialog } = require('electron');
+        const fs = require('fs');
+        
+        dialog.showSaveDialog(mainWindow, {
+            title: 'Save Transformed Audio',
+            defaultPath: path.basename(filePath),
+            filters: [
+                { name: 'Audio Files', extensions: ['wav', 'mp3', 'flac', 'aiff'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        }).then(result => {
+            if (!result.canceled) {
+                try {
+                    fs.copyFileSync(filePath, result.filePath);
+                    console.log('File saved to:', result.filePath);
+                } catch (error) {
+                    console.error('Error saving file:', error);
+                }
+            }
+        });
+    });
+
     checkFFmpegOnStartup(); // Check FFmpeg availability on startup
 
+});
+
+// Clean up on app exit
+app.on('before-quit', () => {
+    cleanupSoundFolder();
+    audioTransformer.cleanup();
+});
+
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
 });
