@@ -12,6 +12,32 @@
 
 **SoundStat** is a free and open-source desktop application for comprehensive audio analysis and transformation. Built with Electron, it provides professional-grade audio statistics, waveform visualization, and format conversion tools in an intuitive interface.
 
+
+
+<div align="center">
+
+### Download for Windows
+
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white&labelColor=0078D4)](https://github.com/jbaudru/SoundStat-soft/releases/latest)
+
+*Also available for macOS and Linux - [View All Releases](https://github.com/jbaudru/SoundStat-soft/releases)*
+
+</div>
+
+---
+
+## 📸 Screenshot
+
+<div align="center">
+  <img src="audio_soft/static/screenshot/3.png" alt="SoundStat Interface" width="800" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+  <p><em>SoundStat's intuitive interface</em></p>
+</div>
+
+<div align="center">
+  <img src="audio_soft/static/screenshot/0.png" alt="SoundStat Interface" width="800" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+  <p><em>SoundStat's audio analysis results with waveform visualization</em></p>
+</div>
+
 ## ✨ Features
 
 ### 🔍 Audio Analysis
@@ -32,7 +58,6 @@
 - **Bit Depth Conversion**: 16-bit, 24-bit, and 32-bit options
 - **Sample Rate Conversion**: 44.1 kHz, 48 kHz, and 96 kHz options
 - **Volume Normalization**: Automatic level adjustment with target dB settings
-- **Batch Processing**: Transform multiple files efficiently
 
 ### 🎯 User Experience
 - **Drag & Drop Interface**: Simple file loading
