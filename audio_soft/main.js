@@ -1,12 +1,23 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
-const { generateWaveform } = require('./lib/sound'); // Import waveform generation function
-const AudioTransformer = require('./lib/audioTransformer'); // Import audio transformer
-const fs = require('fs'); // Import file system module for file existence checks
+const { generateWaveform } = require('./lib/sound'); 
+const AudioTransformer = require('./lib/audioTransformer');
+const fs = require('fs');
 const path = require('path');
 const FFmpegInstaller = require('./lib/ffmpegInstaller');
 
 let mainWindow;
-const audioTransformer = new AudioTransformer();
+let audioTransformer; // Declare but don't initialize yet
+
+// Get the proper sound folder path based on whether app is packaged or not
+function getSoundFolderPath() {
+    if (app.isPackaged) {
+        // For packaged app, use userData directory
+        return path.join(app.getPath('userData'), 'sound');
+    } else {
+        // For development, use local sound folder
+        return path.join(__dirname, 'sound');
+    }
+}
 
 // Check FFmpeg on startup
 async function checkFFmpegOnStartup() {
@@ -21,7 +32,7 @@ async function checkFFmpegOnStartup() {
 
 // Function to clean up all files in the sound folder
 function cleanupSoundFolder() {
-    const soundFolderPath = path.join(__dirname, 'sound');
+    const soundFolderPath = getSoundFolderPath();
     try {
         if (fs.existsSync(soundFolderPath)) {
             const files = fs.readdirSync(soundFolderPath);
@@ -51,11 +62,19 @@ async function transformAudio(inputFile, settings, progressCallback) {
         throw new Error(`Invalid settings: ${validationErrors.join(', ')}`);
     }
     
+    // Ensure the input file exists
+    if (!fs.existsSync(inputFile)) {
+        throw new Error(`Input file not found: ${inputFile}`);
+    }
+    
     // Perform the transformation
     return await audioTransformer.transform(inputFile, settings, progressCallback);
 }
 
 app.on('ready', async () => {
+    // Initialize audioTransformer with app reference AFTER app is ready
+    audioTransformer = new AudioTransformer(app);
+    
     // Check FFmpeg availability on startup
     await checkFFmpegOnStartup();
     
@@ -83,53 +102,49 @@ app.on('ready', async () => {
         mainWindow.webContents.send('toggle-menu');
     });
 
-    // Create sound folder if it doesn't exist
-    const soundFolderPath = path.join(__dirname, 'sound');
+    // Create sound folder if it doesn't exist (using proper path)
+    const soundFolderPath = getSoundFolderPath();
     if (!fs.existsSync(soundFolderPath)) {
-    fs.mkdirSync(soundFolderPath, { recursive: true });
+        fs.mkdirSync(soundFolderPath, { recursive: true });
+        console.log(`Created sound folder at: ${soundFolderPath}`);
     }
 
     // Handle file copying with progressive updates
     ipcMain.on('copy-file-to-sound-folder', (event, originalFilePath) => {
-    try {
-        const fileName = path.basename(originalFilePath);
-        const destinationPath = path.join(soundFolderPath, fileName);
-        
-        // Copy the file
-        fs.copyFileSync(originalFilePath, destinationPath);
+        try {
+            const fileName = path.basename(originalFilePath);
+            const destinationPath = path.join(soundFolderPath, fileName);
+            
+            // Copy the file
+            fs.copyFileSync(originalFilePath, destinationPath);
 
-        // Create progress callback to send updates to renderer
-        const progressCallback = (update) => {
-            event.sender.send('audio-analysis-progress', update);
-        };
+            // Create progress callback to send updates to renderer
+            const progressCallback = (update) => {
+                event.sender.send('audio-analysis-progress', update);
+            };
 
-        generateWaveform(destinationPath, progressCallback)
-            .then(analysisResults => {
-                // Add file information to analysis results
-                const stats = fs.statSync(destinationPath);
-                analysisResults.fileName = fileName;
-                analysisResults.fileSize = stats.size;
-                
-                // Send complete analysis data back to the renderer process
-                event.sender.send('audio-analysis-data', analysisResults);
-                
-                // Clean up sound folder after analysis
-                //cleanupSoundFolder();
-            })
-            .catch(error => {
-                console.error('Error generating waveform:', error);
-                event.sender.send('waveform-error', error.message);
-                
-                // Clean up sound folder even on error
-                //cleanupSoundFolder();
-            });
-        
-        // Send success message with the new file path
-        event.sender.send('file-copy-success', destinationPath);
-    } catch (error) {
-        console.error('Error copying file:', error);
-        event.sender.send('file-copy-error', error.message);
-    }
+            generateWaveform(destinationPath, progressCallback)
+                .then(analysisResults => {
+                    // Add file information to analysis results
+                    const stats = fs.statSync(destinationPath);
+                    analysisResults.fileName = fileName;
+                    analysisResults.fileSize = stats.size;
+                    analysisResults.filePath = destinationPath; // Add the actual file path
+                    
+                    // Send complete analysis data back to the renderer process
+                    event.sender.send('audio-analysis-data', analysisResults);
+                })
+                .catch(error => {
+                    console.error('Error generating waveform:', error);
+                    event.sender.send('waveform-error', error.message);
+                });
+            
+            // Send success message with the new file path
+            event.sender.send('file-copy-success', destinationPath);
+        } catch (error) {
+            console.error('Error copying file:', error);
+            event.sender.send('file-copy-error', error.message);
+        }
     });
 
     // Handle file data processing (for file input selections) with progressive updates
@@ -156,19 +171,14 @@ app.on('ready', async () => {
                     const stats = fs.statSync(destinationPath);
                     analysisResults.fileName = fileName;
                     analysisResults.fileSize = stats.size;
+                    analysisResults.filePath = destinationPath; // Add the actual file path
                     
                     // Send complete analysis data back to the renderer process
                     event.sender.send('audio-analysis-data', analysisResults);
-                    
-                    // Clean up sound folder after analysis
-                    //cleanupSoundFolder();
                 })
                 .catch(error => {
                     console.error('Error generating waveform:', error);
                     event.sender.send('waveform-error', error.message);
-                    
-                    // Clean up sound folder even on error
-                    //cleanupSoundFolder();
                 });
             
             // Send success message with the new file path
@@ -183,6 +193,11 @@ app.on('ready', async () => {
     ipcMain.on('transform-audio', async (event, transformationData) => {
         try {
             const { inputFile, settings } = transformationData;
+            
+            // Log the input file path for debugging
+            console.log('Transform audio request for:', inputFile);
+            console.log('File exists:', fs.existsSync(inputFile));
+            
             const result = await transformAudio(inputFile, settings, (progress) => {
                 event.sender.send('transform-progress', progress);
             });
@@ -218,14 +233,14 @@ app.on('ready', async () => {
         });
     });
 
-    checkFFmpegOnStartup(); // Check FFmpeg availability on startup
-
 });
 
 // Clean up on app exit
 app.on('before-quit', () => {
     cleanupSoundFolder();
-    audioTransformer.cleanup();
+    if (audioTransformer) {
+        audioTransformer.cleanup();
+    }
 });
 
 app.on('window-all-closed', () => {

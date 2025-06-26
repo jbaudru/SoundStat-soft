@@ -3,19 +3,60 @@ const path = require('path');
 const fs = require('fs');
 
 class AudioTransformer {
-    constructor() {
-        this.outputDir = path.join(__dirname, '..', 'sound', 'transformed');
+    constructor(app = null) {
+        // Store app reference for path resolution
+        this.app = app;
+        this.outputDir = this.getOutputDirectory();
         this.ensureOutputDirectory();
     }
 
+    // Get the proper output directory based on whether app is packaged or not
+    getOutputDirectory() {
+        if (this.app && this.app.isPackaged) {
+            // For packaged app, use userData directory
+            return path.join(this.app.getPath('userData'), 'transformed');
+        } else {
+            // For development, use local directory
+            // Check if we have access to app through require (when app is available globally)
+            try {
+                const electron = require('electron');
+                const app = electron.app;
+                if (app && app.isPackaged) {
+                    return path.join(app.getPath('userData'), 'transformed');
+                }
+            } catch (error) {
+                // Electron not available, use local path
+            }
+            
+            // Fallback to local directory for development
+            return path.join(__dirname, '..', 'sound', 'transformed');
+        }
+    }
+
     ensureOutputDirectory() {
-        if (!fs.existsSync(this.outputDir)) {
-            fs.mkdirSync(this.outputDir, { recursive: true });
+        try {
+            if (!fs.existsSync(this.outputDir)) {
+                fs.mkdirSync(this.outputDir, { recursive: true });
+                console.log(`Created transformed audio directory at: ${this.outputDir}`);
+            }
+        } catch (error) {
+            console.error('Error creating output directory:', error);
         }
     }
 
     async transform(inputFile, settings, progressCallback) {
-        const outputFile = path.join(this.outputDir, `${settings.outputName}.${settings.outputFormat}`);
+        // Validate input file exists
+        if (!fs.existsSync(inputFile)) {
+            throw new Error(`Input file does not exist: ${inputFile}`);
+        }
+
+        // Create unique output filename to avoid conflicts
+        const timestamp = Date.now();
+        const outputFileName = `${settings.outputName}_${timestamp}.${settings.outputFormat}`;
+        const outputFile = path.join(this.outputDir, outputFileName);
+        
+        console.log('Transform input:', inputFile);
+        console.log('Transform output:', outputFile);
         
         return new Promise((resolve, reject) => {
             let command = ffmpeg(inputFile);
@@ -63,6 +104,7 @@ class AudioTransformer {
         });
     }
 
+    // ...rest of the methods remain the same...
     configureFormat(command, settings) {
         // Set output format
         command.format(settings.outputFormat);

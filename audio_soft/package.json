@@ -1,11 +1,80 @@
 {
-  "name": "my-electron-app",
-  "version": "1.0.0",
+  "name": "soundstat",
+  "version": "1.0.1",
+  "description": "Audio analysis and transformation tool",
+  "author": "ce2lo",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "setup": "node lib/ffmpegInstaller.js",
-    "setup-ffmpeg": "node lib/ffmpegInstaller.js"
+    "setup-ffmpeg": "node lib/ffmpegInstaller.js",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-portable": "electron-builder --win portable",
+    "build-installer": "electron-builder --win nsis",
+    "dist": "electron-builder --publish=never",
+    "postinstall": "electron-builder install-app-deps",
+    "clean": "rimraf dist"
+  },
+  "build": {
+    "appId": "com.ce2lo.soundstat",
+    "productName": "SoundStat",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}",
+      "!dist",
+      "!build",
+      "!sound/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "ffmpeg/",
+        "to": "ffmpeg/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "static/icon1.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": true,
+      "perMachine": false,
+      "allowElevation": false
+    }
   },
   "dependencies": {
     "audiobuffer-to-wav": "^1.0.0",
@@ -14,6 +83,7 @@
     "waveform-generator": "^1.1.0"
   },
   "devDependencies": {
-    "electron": "^37.1.0"
+    "electron": "^37.1.0",
+    "electron-builder": "^26.0.12"
   }
 }
