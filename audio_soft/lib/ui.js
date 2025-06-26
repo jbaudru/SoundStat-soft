@@ -394,12 +394,24 @@ function updatePartialStatistics(partialResults) {
             bpmConfidence.textContent = 'Could not detect';
         }
     }
-    
-    if (partialResults.key) {
+      if (partialResults.key) {
         const keyValue = document.getElementById('keyValue');
         const dominantFreq = document.getElementById('dominantFreq');
         keyValue.textContent = partialResults.key.note;
         dominantFreq.textContent = `Freq: ${partialResults.key.dominantFreq} Hz`;
+    }
+    
+    if (partialResults.tonality) {
+        const tonalityValue = document.getElementById('tonalityValue');
+        const tonalityConfidence = document.getElementById('tonalityConfidence');
+        
+        if (partialResults.tonality.tonality !== 'Unknown') {
+            tonalityValue.textContent = partialResults.tonality.tonality;
+            tonalityConfidence.textContent = `Confidence: ${(partialResults.tonality.confidence * 100).toFixed(1)}%`;
+        } else {
+            tonalityValue.textContent = 'Unknown';
+            tonalityConfidence.textContent = 'Could not detect';
+        }
     }
 }
 
@@ -478,7 +490,7 @@ function renderWaveform(waveform) {
 
 // Function to update all statistics
 function updateStatistics(analysisResults) {
-    const { bpm, key, stats } = analysisResults;
+    const { bpm, key, tonality, stats } = analysisResults;
     
     // Update BPM
     const bpmValue = document.getElementById('bpmValue');
@@ -496,6 +508,20 @@ function updateStatistics(analysisResults) {
     const dominantFreq = document.getElementById('dominantFreq');
     keyValue.textContent = key.note;
     dominantFreq.textContent = `Freq: ${key.dominantFreq} Hz`;
+    
+    // Update Tonality Detection
+    if (tonality) {
+        const tonalityValue = document.getElementById('tonalityValue');
+        const tonalityConfidence = document.getElementById('tonalityConfidence');
+        
+        if (tonality.tonality !== 'Unknown') {
+            tonalityValue.textContent = tonality.tonality;
+            tonalityConfidence.textContent = `Confidence: ${(tonality.confidence * 100).toFixed(1)}%`;
+        } else {
+            tonalityValue.textContent = 'Unknown';
+            tonalityConfidence.textContent = 'Could not detect';
+        }
+    }
     
     // Update Duration
     const durationValue = document.getElementById('durationValue');
@@ -543,11 +569,11 @@ ipcRenderer.on('waveform-error', (event, error) => {
     
     // Update file info to show error
     fileInfo.textContent = `Error processing file: ${error}`;
-    
-    // Reset all statistics to default values
+      // Reset all statistics to default values
     const defaultStats = {
         bpm: { bpm: 0, confidence: 0 },
         key: { note: 'Error', dominantFreq: 0 },
+        tonality: { tonality: 'Unknown', confidence: 0 },
         stats: {
             duration: 0,
             peak: 0,
@@ -578,6 +604,8 @@ function resetStatisticsToLoading() {
     document.getElementById('bpmConfidence').textContent = 'Analyzing...';
     document.getElementById('keyValue').textContent = '...';
     document.getElementById('dominantFreq').textContent = 'Analyzing...';
+    document.getElementById('tonalityValue').textContent = '...';
+    document.getElementById('tonalityConfidence').textContent = 'Analyzing...';
     document.getElementById('durationValue').textContent = '...';
     document.getElementById('durationFormatted').textContent = 'Analyzing...';
     document.getElementById('peakValue').textContent = '...';

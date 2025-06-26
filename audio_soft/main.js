@@ -64,6 +64,7 @@ app.on('ready', async () => {
         height: 600,
         minWidth: 800,
         minHeight: 600,
+        icon: path.join(__dirname, 'static', 'icon1.png'), 
         title: 'SoundStat',
         webPreferences: {
             nodeIntegration: true,

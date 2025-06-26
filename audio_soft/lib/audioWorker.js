@@ -876,10 +876,146 @@ function detectKey(channelData, sampleRate) {
             note: 'Unknown',
             noteOnly: 'Unknown',
             octave: 0,
-            confidence: 0
+            confidence: 0        };
+    }
+}
+
+// Detect major/minor tonality using chroma vector analysis
+function detectTonality(channelData, sampleRate) {
+    try {
+        // Use a segment from the middle of the audio for analysis
+        const segmentDuration = Math.min(15, channelData.length / sampleRate); // 15 seconds max
+        const segmentSamples = Math.floor(segmentDuration * sampleRate);
+        const startSample = Math.floor((channelData.length - segmentSamples) / 2);
+        const segment = channelData.slice(startSample, startSample + segmentSamples);
+        
+        // Create chroma vector (12 bins for each semitone)
+        const chroma = new Array(12).fill(0);
+        
+        // Analyze multiple frames
+        const frameSize = 4096;
+        const hopSize = frameSize / 2;
+        let frameCount = 0;
+        
+        for (let frameStart = 0; frameStart < segment.length - frameSize; frameStart += hopSize) {
+            const frame = segment.slice(frameStart, frameStart + frameSize);
+            
+            // Apply window function
+            const windowed = frame.map((sample, i) => {
+                const windowValue = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / frameSize);
+                return sample * windowValue;
+            });
+            
+            // Perform FFT
+            const complexSpectrum = fft(windowed);
+            const spectrum = getMagnitudeSpectrum(complexSpectrum);
+            
+            const nyquist = sampleRate / 2;
+            const freqBinSize = nyquist / (spectrum.length / 2);
+            
+            // Map frequency bins to chroma bins
+            for (let i = 1; i < spectrum.length / 2; i++) {
+                const freq = i * freqBinSize;
+                
+                // Only consider musically relevant frequencies (80-2000 Hz)
+                if (freq >= 80 && freq <= 2000) {
+                    // Convert frequency to chroma class (0-11)
+                    const A4 = 440;
+                    const C0 = A4 * Math.pow(2, -4.75);
+                    
+                    if (freq > C0) {
+                        const halfSteps = 12 * Math.log2(freq / C0);
+                        const chromaClass = Math.round(halfSteps) % 12;
+                        const normalizedChroma = ((chromaClass % 12) + 12) % 12;
+                        
+                        // Add magnitude to chroma bin
+                        chroma[normalizedChroma] += spectrum[i];
+                    }
+                }
+            }
+            frameCount++;
+        }
+        
+        // Normalize chroma vector
+        const maxChroma = Math.max(...chroma);
+        if (maxChroma > 0) {
+            for (let i = 0; i < 12; i++) {
+                chroma[i] /= maxChroma;
+            }
+        }
+        
+        // Major and minor templates (Krumhansl-Schmuckler profiles)
+        const majorTemplate = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+        const minorTemplate = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+        
+        // Calculate correlation for all possible keys
+        let bestMajorCorr = -1;
+        let bestMinorCorr = -1;
+        let bestMajorKey = 0;
+        let bestMinorKey = 0;
+        
+        for (let key = 0; key < 12; key++) {
+            // Rotate templates to match key
+            const rotatedMajor = [...majorTemplate.slice(key), ...majorTemplate.slice(0, key)];
+            const rotatedMinor = [...minorTemplate.slice(key), ...minorTemplate.slice(0, key)];
+            
+            // Calculate Pearson correlation
+            const majorCorr = calculateCorrelation(chroma, rotatedMajor);
+            const minorCorr = calculateCorrelation(chroma, rotatedMinor);
+            
+            if (majorCorr > bestMajorCorr) {
+                bestMajorCorr = majorCorr;
+                bestMajorKey = key;
+            }
+            
+            if (minorCorr > bestMinorCorr) {
+                bestMinorCorr = minorCorr;
+                bestMinorKey = key;
+            }
+        }
+        
+        // Determine if major or minor based on best correlation
+        const isMajor = bestMajorCorr > bestMinorCorr;
+        const confidence = Math.max(bestMajorCorr, bestMinorCorr);
+        const keyNote = NOTES[isMajor ? bestMajorKey : bestMinorKey];
+        
+        return {
+            tonality: isMajor ? 'Major' : 'Minor',
+            confidence: Math.max(0, Math.min(1, confidence)), // Clamp between 0 and 1
+            key: keyNote,
+            majorCorrelation: bestMajorCorr,
+            minorCorrelation: bestMinorCorr
+        };
+        
+    } catch (error) {
+        console.error('Error detecting tonality:', error);
+        return {
+            tonality: 'Unknown',
+            confidence: 0,
+            key: 'Unknown',
+            majorCorrelation: 0,
+            minorCorrelation: 0
         };
     }
 }
+
+// Helper function to calculate Pearson correlation coefficient
+function calculateCorrelation(x, y) {
+    const n = x.length;
+    if (n !== y.length) return 0;
+    
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+    const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+    
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    
+    return denominator === 0 ? 0 : numerator / denominator;
+}
+
 // ...existing code...
 
 // Remove the duplicate calculateAudioStats function (keep only one)
@@ -1057,9 +1193,7 @@ async function processAudioFile() {
         parentPort.postMessage({
             type: 'partial_results',
             data: { bpm: bpmResult }
-        });
-
-        // Key Detection moved to the end (most time-consuming)
+        });        // Key Detection moved to the end (most time-consuming)
         parentPort.postMessage({
             type: 'analysis_progress',
             data: { stage: 'Key Detection', progress: 80 }
@@ -1069,6 +1203,18 @@ async function processAudioFile() {
         parentPort.postMessage({
             type: 'partial_results',
             data: { key: keyResult }
+        });
+
+        // Tonality Detection
+        parentPort.postMessage({
+            type: 'analysis_progress',
+            data: { stage: 'Tonality Analysis', progress: 90 }
+        });
+        
+        const tonalityResult = detectTonality(channelData, sampleRate);
+        parentPort.postMessage({
+            type: 'partial_results',
+            data: { tonality: tonalityResult }
         });
 
         // Final completion
@@ -1081,6 +1227,7 @@ async function processAudioFile() {
             waveform: waveformData,
             bpm: bpmResult,
             key: keyResult,
+            tonality: tonalityResult,
             stats: stats
         };
 
